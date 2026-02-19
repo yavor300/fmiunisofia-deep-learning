@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data (ако е голямо)
+# махни реда ако искаш да качваш data
+data/*.csv
+data/*.tsv
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
