@@ -107,6 +107,45 @@ def plot_losses(losses_by_gate):
     plt.close(fig)
 
 
+def plot_network_architecture(hidden_size: int):
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    x_in, x_hidden, x_out = 0.15, 0.5, 0.85
+    input_y = np.array([0.35, 0.65])
+    hidden_y = np.linspace(0.2, 0.8, hidden_size)
+    output_y = np.array([0.5])
+
+    for yi in input_y:
+        for yh in hidden_y:
+            ax.plot([x_in, x_hidden], [yi, yh], color="gray", alpha=0.45, lw=1.0)
+    for yh in hidden_y:
+        ax.plot([x_hidden, x_out], [yh, output_y[0]], color="gray", alpha=0.45, lw=1.0)
+
+    ax.scatter([x_in] * len(input_y), input_y, s=700, color="#4C72B0", edgecolors="black", zorder=3)
+    ax.scatter([x_hidden] * len(hidden_y), hidden_y, s=700, color="#55A868", edgecolors="black", zorder=3)
+    ax.scatter([x_out], output_y, s=700, color="#C44E52", edgecolors="black", zorder=3)
+
+    input_labels = ["A", "B"]
+    for yi, label in zip(input_y, input_labels):
+        ax.text(x_in, yi, label, ha="center", va="center", fontsize=12, color="white", weight="bold")
+    for idx, yh in enumerate(hidden_y, start=1):
+        ax.text(x_hidden, yh, f"H{idx}", ha="center", va="center", fontsize=11, color="white", weight="bold")
+    ax.text(x_out, output_y[0], "Y", ha="center", va="center", fontsize=12, color="white", weight="bold")
+
+    ax.text(x_in, 0.9, "Input layer", ha="center", fontsize=12, weight="bold")
+    ax.text(x_hidden, 0.9, f"Hidden layer ({hidden_size})", ha="center", fontsize=12, weight="bold")
+    ax.text(x_out, 0.9, "Output layer", ha="center", fontsize=12, weight="bold")
+
+    ax.set_title("Neural Network Architecture for Logic Gates (2 -> hidden -> 1)")
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.05, 0.98)
+    ax.axis("off")
+
+    plt.tight_layout()
+    plt.savefig("task03/network_architecture.png", dpi=150)
+    plt.close(fig)
+
+
 def main():
     losses_by_gate = {}
 
@@ -124,7 +163,9 @@ def main():
         losses_by_gate[gate_name] = losses
 
     plot_losses(losses_by_gate)
+    plot_network_architecture(HIDDEN_SIZE)
     print("\nSaved plot: task03/logical_gates_training_loss.png")
+    print("Saved plot: task03/network_architecture.png")
 
 
 if __name__ == "__main__":
