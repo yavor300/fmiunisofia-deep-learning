@@ -18,10 +18,10 @@ def main() -> None:
     x1w1x2w2.label = "x1*w1 + x2*w2"
 
     n = x1w1x2w2 + b
-    n.label = "n"
+    n.label = "logit"
 
     o = n.tanh()
-    o.label = "o"
+    o.label = "L"
 
     draw_dot(o, filename="06_result").render(directory="./graphviz_output", view=False)
 

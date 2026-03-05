@@ -299,7 +299,7 @@ e | Sequence[ColorType] | None" = None, plotnonfinite: 'bool' = False, data=None
 
 By using the above snippet recreate the below plot. Double every population value before plotting.
 
-![w01_task18_fh.png](./assets/w01_task18_fh.png "w01_task18_fh.png")
+![w01_task18_fh.png](../assets/w01_task18_fh.png "w01_task18_fh.png")
 
 **Acceptance criteria:**
 
@@ -315,7 +315,7 @@ Using the list `colors` recreate the below plot.
 colors = ['red', 'green', 'blue', 'blue', 'yellow', 'black', 'green', 'red', 'red', 'green', 'blue', 'yellow', 'green', 'blue', 'yellow', 'green', 'blue', 'blue', 'red', 'blue', 'yellow', 'blue', 'blue', 'yellow', 'red', 'yellow', 'blue', 'blue', 'blue', 'yellow', 'blue', 'green', 'yellow', 'green', 'green', 'blue', 'yellow', 'yellow', 'blue', 'yellow', 'blue', 'blue', 'blue', 'green', 'green', 'blue', 'blue', 'green', 'blue', 'green', 'yellow', 'blue', 'blue', 'yellow', 'yellow', 'red', 'green', 'green', 'red', 'red', 'red', 'red', 'green', 'red', 'green', 'yellow', 'red', 'red', 'blue', 'red', 'red', 'red', 'red', 'blue', 'blue', 'blue', 'blue', 'blue', 'red', 'blue', 'blue', 'blue', 'yellow', 'red', 'green', 'blue', 'blue', 'red', 'blue', 'red', 'green', 'black', 'yellow', 'blue', 'blue', 'green', 'red', 'red', 'yellow', 'yellow', 'yellow', 'red', 'green', 'green', 'yellow', 'blue', 'green', 'blue', 'blue', 'red', 'blue', 'green', 'blue', 'red', 'green', 'green', 'blue', 'blue', 'green', 'red', 'blue', 'blue', 'green', 'green', 'red', 'red', 'blue', 'red', 'blue', 'yellow', 'blue', 'green', 'blue', 'green', 'yellow', 'yellow', 'yellow', 'red', 'red', 'red', 'blue', 'blue']
 ```
 
-![w01_matplotlib_ex9.png](./assets/w01_matplotlib_ex9.png "w01_matplotlib_ex9.png")
+![w01_matplotlib_ex9.png](../assets/w01_matplotlib_ex9.png "w01_matplotlib_ex9.png")
 
 **Acceptance criteria:**
 
@@ -327,7 +327,7 @@ colors = ['red', 'green', 'blue', 'blue', 'yellow', 'black', 'green', 'red', 're
 
 Let's do two final touch-ups. Using the documentation of the functions `plt.text` and `plt.grid`, recreate the below plot. The two biggest bubbles are `China` and `India`. Let's label them.
 
-![w01_matplotlib_ex10.png](./assets/w01_matplotlib_ex10.png "w01_matplotlib_ex10.png")
+![w01_matplotlib_ex10.png](../assets/w01_matplotlib_ex10.png "w01_matplotlib_ex10.png")
 
 If you have a look at your colorful plot, it's clear that people live longer in countries with a higher GDP per capita. No high income countries have really short life expectancy, and no low income countries have very long life expectancy. Still, there is a huge difference in life expectancy between countries on the same income level. Most people live in middle income countries where difference in lifespan is huge between countries; depending on how income is distributed and how it is used.
 
@@ -451,7 +451,7 @@ python task04.py
 
 The following figure gets generated:
 
-![w01_random_walk.png](./assets/w01_random_walk.png "w01_random_walk.png")
+![w01_random_walk.png](../assets/w01_random_walk.png "w01_random_walk.png")
 
 #### Task 05
 
@@ -497,7 +497,7 @@ python task06.py
 
 The following figure gets created:
 
-![w01_random_walk2.png](./assets/w01_random_walk2.png "w01_random_walk2.png")
+![w01_random_walk2.png](../assets/w01_random_walk2.png "w01_random_walk2.png")
 
 #### Task 07
 
@@ -520,7 +520,7 @@ python task07.py
 
 The following figure gets created:
 
-![w01_random_walk_clumsiness.png](./assets/w01_random_walk_clumsiness.png "w01_random_walk_clumsiness.png")
+![w01_random_walk_clumsiness.png](../assets/w01_random_walk_clumsiness.png "w01_random_walk_clumsiness.png")
 
 #### Task 08
 
@@ -546,7 +546,7 @@ python task08.py
 
 The following figure gets created:
 
-![w01_random_walk_histogram.png](./assets/w01_random_walk_histogram.png "w01_random_walk_histogram.png")
+![w01_random_walk_histogram.png](../assets/w01_random_walk_histogram.png "w01_random_walk_histogram.png")
 
 ### Building perceptrons
 

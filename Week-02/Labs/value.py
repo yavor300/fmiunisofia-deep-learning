@@ -24,7 +24,7 @@ class Value:
         return f"Value(data={self.data})"
 
     @staticmethod
-    def _coerce(other: Real | "Value") -> "Value":
+    def _convert(other: Real | "Value") -> "Value":
         if isinstance(other, Value):
             return other
         if isinstance(other, Real):
@@ -32,7 +32,7 @@ class Value:
         return NotImplemented
 
     def __add__(self, other: Real | "Value") -> "Value":
-        other_value = self._coerce(other)
+        other_value = self._convert(other)
         if other_value is NotImplemented:
             return NotImplemented
 
@@ -49,7 +49,7 @@ class Value:
         return self + other
 
     def __mul__(self, other: Real | "Value") -> "Value":
-        other_value = self._coerce(other)
+        other_value = self._convert(other)
         if other_value is NotImplemented:
             return NotImplemented
 
@@ -69,25 +69,25 @@ class Value:
         return self * -1
 
     def __sub__(self, other: Real | "Value") -> "Value":
-        other_value = self._coerce(other)
+        other_value = self._convert(other)
         if other_value is NotImplemented:
             return NotImplemented
         return self + (-other_value)
 
     def __rsub__(self, other: Real | "Value") -> "Value":
-        other_value = self._coerce(other)
+        other_value = self._convert(other)
         if other_value is NotImplemented:
             return NotImplemented
         return other_value + (-self)
 
     def __truediv__(self, other: Real | "Value") -> "Value":
-        other_value = self._coerce(other)
+        other_value = self._convert(other)
         if other_value is NotImplemented:
             return NotImplemented
         return self * (other_value**-1)
 
     def __rtruediv__(self, other: Real | "Value") -> "Value":
-        other_value = self._coerce(other)
+        other_value = self._convert(other)
         if other_value is NotImplemented:
             return NotImplemented
         return other_value / self
@@ -125,9 +125,6 @@ class Value:
 
     def backward(self) -> None:
         topo = top_sort([self])
-        for node in topo:
-            node.grad = 0.0
-
         self.grad = 1.0
         for node in reversed(topo):
             node._backward()
@@ -174,8 +171,7 @@ def draw_dot(root: Value, filename: str = "01_result", show_grad: bool = False):
         import graphviz
     except ModuleNotFoundError as exc:
         message = (
-            "The 'graphviz' Python package is required for draw_dot(). "
-            "Install it with: pip install graphviz"
+            "The graphviz python package is required for draw_dot"
         )
         raise ModuleNotFoundError(message) from exc
 

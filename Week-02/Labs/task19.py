@@ -21,12 +21,12 @@ def main() -> None:
     e = (2 * n).exp()
     e.label = "e^(2n)"
 
-    o = (e - 1) / (e + 1)
-    o.label = "o"
+    l = (e - 1) / (e + 1)
+    l.label = "L"
 
-    o.backward()
+    l.backward()
 
-    draw_dot(o, filename="11_result", show_grad=True).render(directory="./graphviz_output", view=False)
+    draw_dot(l, filename="11_result", show_grad=True).render(directory="./graphviz_output", view=False)
 
 
 if __name__ == "__main__":

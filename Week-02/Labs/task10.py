@@ -53,15 +53,15 @@ def main() -> None:
     # dL/dL = 1
     l.grad = 1.0
 
-    # dL/dd = f and dL/df = d
+    # dL/dd = f ; dL/df = d
     d.grad = f.data * l.grad
     f.grad = d.data * l.grad
 
-    # dL/de = dL/dd * dd/de and dL/dc = dL/dd * dd/dc
+    # dL/de = dL/dd * dd/de ; dL/dc = dL/dd * dd/dc
     e.grad = 1.0 * d.grad
     c.grad = 1.0 * d.grad
 
-    # dL/da = dL/de * de/da and dL/db = dL/de * de/db
+    # dL/da = dL/de * de/da ; dL/db = dL/de * de/db
     a.grad = b.data * e.grad
     b.grad = a.data * e.grad
 
@@ -69,10 +69,10 @@ def main() -> None:
         approx = manual_der(name, vals)
         node = nodes[name]
         assert abs(node.grad - approx) < 1e-3, (
-            f"Gradient mismatch for {name}: manual={node.grad}, finite_diff={approx}"
+            f"gradient mismatch for {name}: manual={node.grad}, finite_diff={approx}"
         )
 
-    print("Manual gradients match finite-difference checks.")
+    print("manual gradients match finite difference checks")
     draw_dot(l, filename="04_result", show_grad=True).render(directory="./graphviz_output", view=False)
 
 

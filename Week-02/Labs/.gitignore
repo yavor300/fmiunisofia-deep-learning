@@ -14,3 +14,4 @@ data/*.tsv
 .DS_Store
 .idea/
 .vscode/
+graphviz_output/

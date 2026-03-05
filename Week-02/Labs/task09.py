@@ -13,9 +13,7 @@ def main() -> None:
     d.label = "d"
     l = d * f
     l.label = "L"
-
-    # Gradient of the output w.r.t. itself.
-    l.grad = 1.0
+    l.grad = 0
 
     draw_dot(l, filename="03_result", show_grad=True).render(directory="./graphviz_output", view=False)
 

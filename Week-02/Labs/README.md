@@ -258,7 +258,7 @@ def main() -> None:
     draw_dot(result).render(directory='./graphviz_output', view=True)
 ```
 
-![w02_01_result](../assets/w02_01_result.svg?raw=true "w02_01_result.png")
+![w02_01_result](../../assets/w02_01_result.svg?raw=true "w02_01_result.png")
 
 #### Task 8
 
@@ -272,7 +272,7 @@ Include a label of the node in the visualization shown by `graphviz` and add ano
 python task08.py
 ```
 
-![w02_02_result](../assets/w02_02_result.svg?raw=true "w02_02_result.png")
+![w02_02_result](../../assets/w02_02_result.svg?raw=true "w02_02_result.png")
 
 #### Task 9
 
@@ -290,7 +290,7 @@ Visualize the gradient of each node via `graphviz`.
 python task09.py
 ```
 
-![w02_03_result](../assets/w02_03_result.svg?raw=true "w02_03_result.png")
+![w02_03_result](../../assets/w02_03_result.svg?raw=true "w02_03_result.png")
 
 #### Task 10
 
@@ -307,7 +307,7 @@ To check your calculations, define a function `manual_der` outside of the class 
 
 **Test case:**
 
-![w02_04_result](../assets/w02_04_result.svg?raw=true "w02_04_result.png")
+![w02_04_result](../../assets/w02_04_result.svg?raw=true "w02_04_result.png")
 
 #### Task 11
 
@@ -334,7 +334,7 @@ Implement a perceptron with two inputs (for now without an activation function).
 
 Here's what the perceptron model looks like:
 
-![w02_neuron_model](../assets/w02_neuron_model.jpeg?raw=true "w02_neuron_model.jpeg")
+![w02_neuron_model](../../assets/w02_neuron_model.jpeg?raw=true "w02_neuron_model.jpeg")
 
 You can see from the test case what configuration you have to use for `x1`, `x2`, `w1`, `w2` and `b`.
 
@@ -344,7 +344,7 @@ You can see from the test case what configuration you have to use for `x1`, `x2`
 python task12.py
 ```
 
-![w02_05_result](../assets/w02_05_result.svg?raw=true "w02_05_result.svg")
+![w02_05_result](../../assets/w02_05_result.svg?raw=true "w02_05_result.svg")
 
 #### Task 13
 
@@ -360,7 +360,7 @@ Let's also change the value of the bias to be `6.8813735870195432` (so that we g
 python task13.py
 ```
 
-![w02_06_result](../assets/w02_06_result.svg?raw=true "w02_06_result.svg")
+![w02_06_result](../../assets/w02_06_result.svg?raw=true "w02_06_result.svg")
 
 #### Task 14
 
@@ -374,7 +374,7 @@ Manually backpropagate the gradients.
 python task14.py
 ```
 
-![w02_07_result](../assets/w02_07_result.svg?raw=true "w02_07_result.svg")
+![w02_07_result](../../assets/w02_07_result.svg?raw=true "w02_07_result.svg")
 
 #### Task 15
 
@@ -398,7 +398,7 @@ To do this, we'll need to:
 python task15.py
 ```
 
-![w02_08_result](../assets/w02_08_result.svg?raw=true "w02_08_result.svg")
+![w02_08_result](../../assets/w02_08_result.svg?raw=true "w02_08_result.svg")
 
 #### Task 16
 
@@ -418,7 +418,7 @@ Implement `_backward` for the multiplication and hyperbolic tangent operations.
 python task16.py
 ```
 
-![w02_09_result](../assets/w02_09_result.svg?raw=true "w02_09_result.svg")
+![w02_09_result](../../assets/w02_09_result.svg?raw=true "w02_09_result.svg")
 
 #### Task 17
 
@@ -426,7 +426,7 @@ python task16.py
 
 Currently, when we use a variable more than once the gradient gets overwritten. It can be seen below that the gradient of `x` should be `2` because `y = 2 * x`, but it is instead `1`.
 
-![w02_10_result_bug](../assets/w02_10_result_bug.svg?raw=true "w02_10_result_bug.svg")
+![w02_10_result_bug](../../assets/w02_10_result_bug.svg?raw=true "w02_10_result_bug.svg")
 
 To fix this, we can accumulate the gradient instead of resetting it every time `_backward` is called.
 
@@ -440,7 +440,7 @@ To fix this, we can accumulate the gradient instead of resetting it every time `
 python task17.py
 ```
 
-![w02_10_result](../assets/w02_10_result.svg?raw=true "w02_10_result.svg")
+![w02_10_result](../../assets/w02_10_result.svg?raw=true "w02_10_result.svg")
 
 #### Task 18
 
@@ -498,7 +498,7 @@ Break down the hyperbolic tangent into the expressions that comprise it and back
 python task19.py
 ```
 
-![w02_11_result](../assets/w02_11_result.svg?raw=true "w02_11_result.svg")
+![w02_11_result](../../assets/w02_11_result.svg?raw=true "w02_11_result.svg")
 
 ### Using `Value`s to create `Neuron`s
 
@@ -562,11 +562,11 @@ Examples:
 
 - if the parameters are `in_channels=3, hidden_channels=[4, 2]`, we'd create the following model:
 
-![w02_mlp_ex1](../assets/w02_mlp_ex1.png "w02_mlp_ex1.png")
+![w02_mlp_ex1](../../assets/w02_mlp_ex1.png "w02_mlp_ex1.png")
 
 - if the parameters are `in_channels=3, hidden_channels=[4, 4, 4, 1]`, we'd create the following model:
 
-![w02_mlp_ex2](../assets/w02_mlp_ex2.png "w02_mlp_ex2.png")
+![w02_mlp_ex2](../../assets/w02_mlp_ex2.png "w02_mlp_ex2.png")
 
 **Test case:**
 
@@ -593,7 +593,7 @@ Value(data=0.5956867123527914)
 
 and the following `svg` file representing the first model:
 
-![w02_p2_03_res](../assets/w02_p2_03_res.svg?raw=true "w02_p2_03_res.png")
+![w02_p2_03_res](../../assets/w02_p2_03_res.svg?raw=true "w02_p2_03_res.png")
 
 #### Task 4
 

@@ -17,15 +17,15 @@ def main() -> None:
     x1w1x2w2 = x1w1 + x2w2
     x1w1x2w2.label = "x1*w1 + x2*w2"
 
-    n = x1w1x2w2 + b
-    n.label = "n"
+    logit = x1w1x2w2 + b
+    logit.label = "logit"
 
-    o = n.tanh()
-    o.label = "o"
+    l = logit.tanh()
+    l.label = "L"
 
-    o.backward()
+    l.backward()
 
-    draw_dot(o, filename="09_result", show_grad=True).render(directory="./graphviz_output", view=False)
+    draw_dot(l, filename="09_result", show_grad=True).render(directory="./graphviz_output", view=False)
 
 
 if __name__ == "__main__":

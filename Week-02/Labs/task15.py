@@ -2,19 +2,15 @@ from value import Value, draw_dot
 
 
 def main() -> None:
-    a = Value(2.0, label="a")
-    b = Value(-3.0, label="b")
-    c = Value(10.0, label="c")
+    x = Value(5.0, label="x")
+    y = Value(10.0, label="y")
 
-    d = a + b
-    d.label = "d"
+    z = x + y
+    z.label = "z"
 
-    l = d + c
-    l.label = "L"
+    z.backward()
 
-    l.backward()
-
-    draw_dot(l, filename="08_result", show_grad=True).render(directory="./graphviz_output", view=False)
+    draw_dot(z, filename="08_result", show_grad=True).render(directory="./graphviz_output", view=False)
 
 
 if __name__ == "__main__":

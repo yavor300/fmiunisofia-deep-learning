@@ -9,10 +9,10 @@ def main() -> None:
     e = a * b
     e.label = "e"
 
-    d = e + c
+    d = c + e
     d.label = "d"
 
-    f = Value(-2.0, label="f")
+    f = Value(5.0, label="f")
 
     result = d * f
     result.label = "L"
