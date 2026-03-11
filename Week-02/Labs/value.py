@@ -114,7 +114,9 @@ class Value:
         return out
 
     def tanh(self) -> "Value":
-        tanh_value = math.tanh(self.data)
+        # Use explicit tanh formula
+        exp_2x = math.exp(2.0 * self.data)
+        tanh_value = (exp_2x - 1.0) / (exp_2x + 1.0)
         out = Value(tanh_value, (self,), "tanh")
 
         def _backward() -> None:
