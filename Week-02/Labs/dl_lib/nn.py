@@ -3,6 +3,17 @@ from __future__ import annotations
 import abc
 from typing import Any, List
 
+_TORCH = None
+
+
+def _get_torch():
+    global _TORCH
+    if _TORCH is None:
+        import torch  # type: ignore
+
+        _TORCH = torch
+    return _TORCH
+
 
 class Module(abc.ABC):
     @abc.abstractmethod
@@ -15,23 +26,22 @@ class Module(abc.ABC):
 
 class Sigmoid(Module):
     def forward(self, input_tensor: Any) -> Any:
-        import torch
-
+        torch = _get_torch()
         return 1.0 / (1.0 + torch.exp(-input_tensor))
 
 
 class Tanh(Module):
     def forward(self, input_tensor: Any) -> Any:
-        import torch
-
-        return torch.tanh(input_tensor)
+        torch = _get_torch()
+        exp_2x = torch.exp(2.0 * input_tensor)
+        return (exp_2x - 1.0) / (exp_2x + 1.0)
 
 
 class ReLU(Module):
     def forward(self, input_tensor: Any) -> Any:
-        import torch
-
-        return torch.relu(input_tensor)
+        torch = _get_torch()
+        zeros = torch.zeros_like(input_tensor)
+        return torch.where(input_tensor > 0.0, input_tensor, zeros)
 
 
 class LeakyReLU(Module):
@@ -39,12 +49,8 @@ class LeakyReLU(Module):
         self.negative_slope = negative_slope
 
     def forward(self, input_tensor: Any) -> Any:
-        import torch
-
-        zeros = torch.zeros_like(input_tensor)
-        return torch.maximum(input_tensor, zeros) + self.negative_slope * torch.minimum(
-            input_tensor, zeros
-        )
+        torch = _get_torch()
+        return torch.where(input_tensor >= 0.0, input_tensor, self.negative_slope * input_tensor)
 
 
 class Sequential(Module):
