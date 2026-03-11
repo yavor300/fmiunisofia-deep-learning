@@ -6,10 +6,11 @@ from typing import Any, List
 _TORCH = None
 
 
+# safe module import until torch is actually needed.
 def _get_torch():
     global _TORCH
     if _TORCH is None:
-        import torch  # type: ignore
+        import torch
 
         _TORCH = torch
     return _TORCH
