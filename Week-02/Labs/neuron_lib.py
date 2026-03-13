@@ -54,6 +54,7 @@ Layer = Linear
 class MLP:
     def __init__(self, in_channels: int, hidden_channels: Sequence[int]) -> None:
         # keep each layer wired with in_channels
+        sizes = [] # to use next input size
         self.layers = [
             Linear(in_features=in_channels, out_features=out_channels)
             for out_channels in hidden_channels
