@@ -24,6 +24,18 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
 
 
+def format_delta(current: float, baseline: float, higher_is_better: bool) -> str:
+    if abs(baseline) < 1e-12:
+        if abs(current - baseline) < 1e-12:
+            return "0.00%"
+        return "N/A"
+    if higher_is_better:
+        change = (current - baseline) / abs(baseline) * 100.0
+    else:
+        change = (baseline - current) / abs(baseline) * 100.0
+    return f"{change:+.2f}%"
+
+
 def load_mnist_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     try:
         from datasets import load_dataset
@@ -137,6 +149,13 @@ def main() -> None:
     print(f"Test loss: {test_loss:.6f}")
     print(f"Test accuracy: {test_acc:.4f}")
 
+    majority_class = int(np.bincount(y_train).argmax())
+    baseline_preds = np.full_like(y_test, fill_value=majority_class)
+    baseline_acc = float((baseline_preds == y_test).mean())
+    baseline_logits = torch.zeros((len(y_test), 10), dtype=torch.float32)
+    baseline_logits[:, majority_class] = 1.0
+    baseline_loss = float(loss_fn(baseline_logits, torch.tensor(y_test, dtype=torch.long)).item())
+
     plot_path = Path(__file__).with_name("data-science-12-training-curves.png")
     plt.figure(figsize=(12, 5))
 
@@ -163,26 +182,31 @@ def main() -> None:
 
     report_path = Path(__file__).with_name("data-science-12-model-report.md")
     report_lines = [
-        "# Task 12 Model Report",
+        "# Model Report - Task 12",
         "",
-        "## Dataset",
+        "## Context",
         "- MNIST loaded from Hugging Face: `ylecun/mnist`.",
         "- Images flattened to 784 features and normalized to [0, 1].",
         "",
-        "## Model and Training",
-        "- Model: Linear(784->256) + ReLU + Linear(256->128) + ReLU + Linear(128->10).",
-        f"- Epochs: {EPOCHS}",
-        f"- Batch size: {BATCH_SIZE}",
-        f"- Learning rate: {LEARNING_RATE}",
-        "- Optimizer: AdamW",
-        "- Loss: CrossEntropyLoss",
+        "## Experiments Table",
+        "| Hypothesis | Architecture / Strategy | Epochs | Batch Size | Learning Rate | Optimizer | Test CE Loss (Δ vs baseline) | Test Accuracy (Δ vs baseline) | Comments |",
+        "|---|---|---:|---:|---:|---|---|---|---|",
+        f"| baseline_majority_class | Predict the most common class ({majority_class}) for every image | N/A | N/A | N/A | N/A | {baseline_loss:.6f} (+0.00%) | {baseline_acc:.4f} (+0.00%) | Baseline model required by reporting standard. |",
+        (
+            "| nn_linear_mnist | Linear(784->256)->ReLU->Linear(256->128)->ReLU->Linear(128->10) | "
+            f"{EPOCHS} | {BATCH_SIZE} | {LEARNING_RATE} | AdamW | "
+            f"{test_loss:.6f} ({format_delta(test_loss, baseline_loss, higher_is_better=False)}) | "
+            f"{test_acc:.4f} ({format_delta(test_acc, baseline_acc, higher_is_better=True)}) | "
+            "Trained model with strong improvement over baseline. |"
+        ),
         "",
-        "## Final Results",
-        f"- Final validation loss: {val_losses[-1]:.6f}",
-        f"- Final validation accuracy: {val_accuracies[-1]:.4f}",
-        f"- Test loss: {test_loss:.6f}",
-        f"- Test accuracy: {test_acc:.4f}",
-        f"- Curves saved at `{plot_path.name}`.",
+        "## Best Model",
+        "Best model: **nn_linear_mnist**, because it improved both core test metrics versus baseline "
+        f"(CE loss `{test_loss:.6f}` vs `{baseline_loss:.6f}`, accuracy `{test_acc:.4f}` vs `{baseline_acc:.4f}`).",
+        "",
+        "## Diagrams",
+        f"- Train vs validation loss curve: `{plot_path.name}` (left panel).",
+        f"- Train vs validation accuracy curve: `{plot_path.name}` (right panel).",
     ]
     report_path.write_text("\n".join(report_lines), encoding="utf-8")
 

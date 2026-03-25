@@ -1,18 +1,19 @@
-# Task 6 Model Report
+# Model Report - Task 6
 
-## Setup
+## Context
 - Features: `experience_level`, `employment_type`, `remote_ratio`, `company_size`.
 - Target: `salary_in_usd`.
-- Categorical encoding: One-hot encoding.
-- Normalization: StandardScaler on features and target.
-- Training: 20 epochs, batch size 8, AdamW, lr=0.001.
+- Task constraint: full dataset was used for training (no separate test split in this exercise).
 
-## Final Epoch Losses
-- nn_with_sigmoid: 0.776745462496864
-- nn_with_relu: 0.7593583499814601
-- nn_with_leakyrelu: 0.7638996735532233
+## Experiments Table
+| Hypothesis | Activation | Epochs | Batch Size | Learning Rate | Optimizer | Final Train MSE (Δ vs baseline) | Comments |
+|---|---|---:|---:|---:|---|---|---|
+| nn_with_sigmoid | Sigmoid | 20 | 8 | 0.001 | AdamW | 0.776745 (+0.00%) | Baseline model. |
+| nn_with_relu | ReLU | 20 | 8 | 0.001 | AdamW | 0.759358 (+2.24%) | Best final train MSE among tested activations. |
+| nn_with_leakyrelu | LeakyReLU | 20 | 8 | 0.001 | AdamW | 0.763900 (+1.65%) | Better than baseline, but not the best. |
 
 ## Best Model
-- nn_with_relu (0.7593583499814601).
+Best model: **nn_with_relu**, because it achieved the lowest final train MSE (`0.759358`).
 
-Plot saved at `data-science-6-losses.png`.
+## Diagrams
+- Train loss curve (all hypotheses): `data-science-6-losses.png`.

@@ -2,3 +2,4 @@ assets/
 .venv/
 DATA/
 __pycache__
+notes.md

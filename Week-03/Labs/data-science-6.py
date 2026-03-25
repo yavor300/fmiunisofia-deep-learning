@@ -21,6 +21,18 @@ LEARNING_RATE = 0.001
 EPOCHS = 20
 
 
+def format_delta(current: float, baseline: float, higher_is_better: bool) -> str:
+    if abs(baseline) < 1e-12:
+        if abs(current - baseline) < 1e-12:
+            return "0.00%"
+        return "N/A"
+    if higher_is_better:
+        change = (current - baseline) / abs(baseline) * 100.0
+    else:
+        change = (baseline - current) / abs(baseline) * 100.0
+    return f"{change:+.2f}%"
+
+
 def set_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -147,26 +159,51 @@ def main() -> None:
     plt.tight_layout()
     plt.savefig(plot_path)
 
+    baseline_name = "nn_with_sigmoid"
+    baseline_loss = final_losses[baseline_name]
+
+    activation_by_model = {
+        "nn_with_sigmoid": "Sigmoid",
+        "nn_with_relu": "ReLU",
+        "nn_with_leakyrelu": "LeakyReLU",
+    }
+
     report_path = Path(__file__).with_name("data-science-6-model-report.md")
     report_lines = [
-        "# Task 6 Model Report",
+        "# Model Report - Task 6",
         "",
-        "## Setup",
+        "## Context",
         "- Features: `experience_level`, `employment_type`, `remote_ratio`, `company_size`.",
         "- Target: `salary_in_usd`.",
-        "- Categorical encoding: One-hot encoding.",
-        "- Normalization: StandardScaler on features and target.",
-        f"- Training: {EPOCHS} epochs, batch size {BATCH_SIZE}, AdamW, lr={LEARNING_RATE}.",
+        "- Task constraint: full dataset was used for training (no separate test split in this exercise).",
         "",
-        "## Final Epoch Losses",
+        "## Experiments Table",
+        "| Hypothesis | Activation | Epochs | Batch Size | Learning Rate | Optimizer | Final Train MSE (Δ vs baseline) | Comments |",
+        "|---|---|---:|---:|---:|---|---|---|",
     ]
-    for name, value in final_losses.items():
-        report_lines.append(f"- {name}: {value}")
+
+    for model_name in ["nn_with_sigmoid", "nn_with_relu", "nn_with_leakyrelu"]:
+        loss_value = final_losses[model_name]
+        delta_text = format_delta(loss_value, baseline_loss, higher_is_better=False)
+        metric_text = f"{loss_value:.6f} ({delta_text})"
+        if model_name == baseline_name:
+            comment = "Baseline model."
+        elif model_name == best_model:
+            comment = "Best final train MSE among tested activations."
+        else:
+            comment = "Better than baseline, but not the best."
+        report_lines.append(
+            f"| {model_name} | {activation_by_model[model_name]} | {EPOCHS} | {BATCH_SIZE} | {LEARNING_RATE} | AdamW | {metric_text} | {comment} |"
+        )
+
     report_lines.extend(
         [
             "",
-            f"## Best Model\n- {best_model} ({final_losses[best_model]}).",
-            f"\nPlot saved at `{plot_path.name}`.",
+            "## Best Model",
+            f"Best model: **{best_model}**, because it achieved the lowest final train MSE (`{final_losses[best_model]:.6f}`).",
+            "",
+            "## Diagrams",
+            f"- Train loss curve (all hypotheses): `{plot_path.name}`.",
         ]
     )
     report_path.write_text("\n".join(report_lines), encoding="utf-8")
