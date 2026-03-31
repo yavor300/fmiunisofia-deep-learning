@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Tuple
 
-from .nn import Module, _get_torch
+import torch
+
+from .nn import Module
 
 
 class Optimizer(Module):
@@ -34,7 +36,6 @@ class SGD(Optimizer):
         self._velocity: Dict[int, Any] = {}
 
     def step(self) -> None:
-        torch = _get_torch()
         for parameter in self.params:
             if parameter.grad is None:
                 continue
@@ -61,7 +62,6 @@ class AdaGrad(Optimizer):
         self._accumulator: Dict[int, Any] = {}
 
     def step(self) -> None:
-        torch = _get_torch()
         for parameter in self.params:
             if parameter.grad is None:
                 continue
@@ -87,7 +87,6 @@ class RMSprop(Optimizer):
         self._square_avg: Dict[int, Any] = {}
 
     def step(self) -> None:
-        torch = _get_torch()
         for parameter in self.params:
             if parameter.grad is None:
                 continue
@@ -119,7 +118,6 @@ class Adam(Optimizer):
         self._v: Dict[int, Any] = {}
 
     def step(self) -> None:
-        torch = _get_torch()
         beta1, beta2 = self.betas
         self._step_count += 1
 
@@ -160,7 +158,6 @@ class AdamW(Adam):
         self.weight_decay = weight_decay
 
     def step(self) -> None:
-        torch = _get_torch()
         for parameter in self.params:
             if parameter.grad is not None:
                 with torch.no_grad():
