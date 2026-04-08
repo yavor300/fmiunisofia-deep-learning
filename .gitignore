@@ -3,3 +3,4 @@ assets/
 DATA/
 __pycache__
 notes.md
+runs/**

@@ -1,0 +1,7 @@
+path: /mnt/c/Users/yavorchamov/yavor300/fmiunisofia-deep-machine-learning/DATA/car_bee_detection/datasets
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: car
+  1: background

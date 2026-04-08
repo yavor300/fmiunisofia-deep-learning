@@ -1,3 +1,3 @@
-from . import nn, optim
+from . import models, nn, optim
 
-__all__ = ["nn", "optim"]
+__all__ = ["nn", "optim", "models"]
