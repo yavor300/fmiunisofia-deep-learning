@@ -18,6 +18,7 @@ training:
   mixed_precision: true
   device: cuda
   gradient_clip_norm: 1.0
+  early_stopping_patience: null
 
 optimizer:
   name: adamw

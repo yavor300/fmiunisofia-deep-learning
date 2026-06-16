@@ -51,6 +51,12 @@ For a quick smoke run on a few masks:
 make baseline RUN_NAME=baseline_smoke MAX_TRAIN_MASKS=5 MAX_EVAL_MASKS=5
 ```
 
+Validate that a configured model returns logits with the expected shape:
+
+```bash
+make model-shape CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml
+```
+
 Run training with the default config:
 
 ```bash
@@ -70,6 +76,12 @@ make train CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml RUN_NAME=demo_t
 ```
 
 Each run writes `resolved_config.yaml` under `outputs/train/<run-name>/`.
+
+Resume training from the last checkpoint:
+
+```bash
+make train CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml RUN_NAME=demo_train RESUME=outputs/train/demo_train/checkpoints/last.pt
+```
 
 ## Evaluation
 

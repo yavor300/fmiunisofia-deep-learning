@@ -9,6 +9,9 @@ model:
   architecture: tiny_unet
   encoder_name: null
   encoder_weights: null
+  in_channels: 3
+  num_classes: 19
+  base_channels: 16
 
 loss:
   name: cross_entropy

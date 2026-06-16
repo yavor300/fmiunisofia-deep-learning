@@ -1,6 +1,7 @@
 CONFIG ?= configs/default.yaml
 CHECKPOINT ?=
 RUN_NAME ?=
+RESUME ?=
 MAX_TRAIN_MASKS ?=
 MAX_EVAL_MASKS ?=
 VENV_PYTHON := $(wildcard .venv/bin/python)
@@ -8,9 +9,10 @@ VENV_PIP := $(wildcard .venv/bin/pip)
 PYTHON ?= $(if $(VENV_PYTHON),.venv/bin/python,python)
 PIP ?= $(if $(VENV_PIP),.venv/bin/pip,pip)
 RUN_NAME_ARG := $(if $(RUN_NAME),--run-name $(RUN_NAME),)
+RESUME_ARG := $(if $(RESUME),--resume $(RESUME),)
 BASELINE_LIMIT_ARGS := $(if $(MAX_TRAIN_MASKS),--max-train-masks $(MAX_TRAIN_MASKS),) $(if $(MAX_EVAL_MASKS),--max-eval-masks $(MAX_EVAL_MASKS),)
 
-.PHONY: install eda baseline train eval report app test
+.PHONY: install eda baseline model-shape train eval report app test
 
 install:
 	$(PIP) install -r requirements.txt
@@ -21,8 +23,11 @@ eda:
 baseline:
 	$(PYTHON) -m src.cityseg.models.majority_baseline --config configs/experiments/000_baseline_majority.yaml --split val $(RUN_NAME_ARG) $(BASELINE_LIMIT_ARGS)
 
+model-shape:
+	$(PYTHON) -m src.cityseg.models.factory --config $(CONFIG)
+
 train:
-	$(PYTHON) -m src.cityseg.training.train --config $(CONFIG) $(RUN_NAME_ARG)
+	$(PYTHON) -m src.cityseg.training.train --config $(CONFIG) $(RUN_NAME_ARG) $(RESUME_ARG)
 
 eval:
 	$(PYTHON) -m src.cityseg.training.evaluate --config $(CONFIG) --checkpoint $(CHECKPOINT) $(RUN_NAME_ARG)
