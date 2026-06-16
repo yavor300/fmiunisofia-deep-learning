@@ -27,6 +27,7 @@ from src.cityseg.training.losses import (
     FocalLoss,
 )
 from src.cityseg.training.metrics import SegmentationMetrics
+from src.cityseg.training.schedulers import Scheduler, build_scheduler, step_scheduler
 
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt  # noqa: E402
@@ -125,9 +126,6 @@ def train_model(
             device=device,
             use_amp=use_amp,
         )
-        if scheduler is not None:
-            scheduler.step()
-
         row = {
             "epoch": epoch,
             "train_loss": train_loss,
@@ -137,6 +135,7 @@ def train_model(
             "val_pixel_accuracy": validation["pixel_accuracy"],
             "learning_rate": current_learning_rate(optimizer),
         }
+        step_scheduler(scheduler, validation_metric=float(row["val_mean_iou"]))
         history.append(row)
         is_best = float(row["val_mean_iou"]) > best_mean_iou
         if is_best:
@@ -218,28 +217,6 @@ def build_optimizer(model: nn.Module, config: dict[str, Any]) -> torch.optim.Opt
     raise ValueError(f"Unsupported optimizer: {name}")
 
 
-def build_scheduler(
-    optimizer: torch.optim.Optimizer,
-    config: dict[str, Any],
-) -> torch.optim.lr_scheduler.LRScheduler | None:
-    name = str(config.get("name", "none")).lower()
-    if name in {"none", "null"}:
-        return None
-    if name in {"step", "step_decay", "step_lr"}:
-        return torch.optim.lr_scheduler.StepLR(
-            optimizer,
-            step_size=int(config.get("step_size", 10)),
-            gamma=float(config.get("gamma", 0.1)),
-        )
-    if name in {"cosine", "cosine_annealing"}:
-        return torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer,
-            T_max=int(config.get("t_max", config.get("T_max", 30))),
-            eta_min=float(config.get("eta_min", 0.0)),
-        )
-    raise ValueError(f"Unsupported scheduler: {name}")
-
-
 def train_one_epoch(
     model: nn.Module,
     dataloader: torch.utils.data.DataLoader,
@@ -311,7 +288,7 @@ def save_checkpoint(
     path: Path,
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    scheduler: Scheduler | None,
     epoch: int,
     best_mean_iou: float,
     history: list[dict[str, float | int]],
@@ -333,7 +310,7 @@ def load_training_state(
     checkpoint_path: Path,
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    scheduler: Scheduler | None,
     device: torch.device,
 ) -> tuple[int, float, list[dict[str, float | int]]]:
     checkpoint = _torch_load(checkpoint_path, map_location=device)
@@ -373,6 +350,12 @@ def write_training_plots(history: list[dict[str, float | int]], output_dir: Path
         epochs,
         {"val_mean_iou": [float(row["val_mean_iou"]) for row in history]},
         ylabel="Mean IoU",
+    )
+    _plot_lines(
+        output_dir / "learning_rate.png",
+        epochs,
+        {"learning_rate": [float(row["learning_rate"]) for row in history]},
+        ylabel="Learning rate",
     )
 
 

@@ -83,6 +83,15 @@ Resume training from the last checkpoint:
 make train CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml RUN_NAME=demo_train RESUME=outputs/train/demo_train/checkpoints/last.pt
 ```
 
+Compare learning-rate schedulers with matched Tiny U-Net runs:
+
+```bash
+make train CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml RUN_NAME=tiny_unet_step
+make train CONFIG=configs/experiments/002_tiny_unet_ce_cosine.yaml RUN_NAME=tiny_unet_cosine
+```
+
+Each run writes `history.csv` and `learning_rate.png`.
+
 ## Evaluation
 
 Evaluate a checkpoint with:

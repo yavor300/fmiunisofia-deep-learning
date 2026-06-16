@@ -15,6 +15,7 @@ from src.cityseg.training.metrics import (
     per_class_iou,
     pixel_accuracy,
 )
+from src.cityseg.training.schedulers import build_scheduler, step_scheduler
 
 __all__ = [
     "CrossEntropyDiceLoss",
@@ -28,4 +29,6 @@ __all__ = [
     "mean_iou",
     "per_class_iou",
     "pixel_accuracy",
+    "build_scheduler",
+    "step_scheduler",
 ]

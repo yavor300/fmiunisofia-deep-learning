@@ -133,6 +133,7 @@ class TestTrainModel(unittest.TestCase):
             self.assertTrue((output_dir / "history.csv").exists())
             self.assertTrue((output_dir / "train_val_loss.png").exists())
             self.assertTrue((output_dir / "train_val_mean_iou.png").exists())
+            self.assertTrue((output_dir / "learning_rate.png").exists())
             self.assertTrue((output_dir / "predictions_preview.png").exists())
             self.assertTrue((output_dir / "config.yaml").exists())
             self.assertTrue((output_dir / "resolved_config.yaml").exists())

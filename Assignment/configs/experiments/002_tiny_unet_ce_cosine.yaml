@@ -3,9 +3,9 @@ training:
   batch_size: 2
 
 scheduler:
-  name: step_decay
-  step_size: 2
-  gamma: 0.5
+  name: cosine_annealing
+  t_max: 5
+  eta_min: 0.000001
 
 model:
   architecture: tiny_unet
