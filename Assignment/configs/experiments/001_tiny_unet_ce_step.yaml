@@ -1,0 +1,14 @@
+training:
+  epochs: 5
+  batch_size: 2
+
+scheduler:
+  name: step_decay
+
+model:
+  architecture: tiny_unet
+  encoder_name: null
+  encoder_weights: null
+
+loss:
+  name: cross_entropy

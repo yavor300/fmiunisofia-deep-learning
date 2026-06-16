@@ -287,7 +287,7 @@ semantic-segmentation-cityscapes/
 
 Tasks:
 
-1. Create `pyproject.toml` or `requirements.txt` with these dependencies:
+1. Create `requirements.txt` with these dependencies:
    - `torch`
    - `torchvision`
    - `segmentation-models-pytorch`

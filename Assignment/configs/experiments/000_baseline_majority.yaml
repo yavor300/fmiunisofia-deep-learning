@@ -1,0 +1,8 @@
+model:
+  architecture: majority_baseline
+  encoder_name: null
+  encoder_weights: null
+
+baseline:
+  train_split: train
+  eval_split: val

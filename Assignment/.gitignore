@@ -1,0 +1,31 @@
+# Dataset files
+data/raw/
+data/processed/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Model artifacts and experiment outputs
+checkpoints/
+outputs/
+runs/
+reports/*.csv
+reports/*.xlsx
+reports/*.png
+reports/figures/*.png
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Local/editor noise
+.DS_Store
+.env
