@@ -452,13 +452,19 @@ class NoOpGradScaler:
 
 def create_grad_scaler(use_amp: bool) -> GradScalerLike:
     if use_amp:
-        return torch.cuda.amp.GradScaler()
+        try:
+            return torch.amp.GradScaler("cuda")
+        except AttributeError:
+            return torch.cuda.amp.GradScaler()
     return NoOpGradScaler()
 
 
 def autocast_context(use_amp: bool) -> Any:
     if use_amp:
-        return torch.cuda.amp.autocast()
+        try:
+            return torch.amp.autocast("cuda")
+        except AttributeError:
+            return torch.cuda.amp.autocast()
     return nullcontext()
 
 
