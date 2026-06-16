@@ -29,3 +29,4 @@ __pycache__/
 # Local/editor noise
 .DS_Store
 .env
+/src/cityseg/data/__pycache__/
