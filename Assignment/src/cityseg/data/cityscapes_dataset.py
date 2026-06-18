@@ -56,9 +56,17 @@ class CityscapesDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         mask_array = convert_label_ids_to_train_ids(mask_array)
 
         if self.transforms is not None:
-            image_array, mask_array = self._apply_transforms(image_array, mask_array)
+            image_array, mask_array = self._apply_transforms(
+                image_array,
+                mask_array,
+                self.transforms,
+            )
 
-        image_tensor = torch.from_numpy(image_array).permute(2, 0, 1).float().div(255.0)
+        image_array = np.ascontiguousarray(image_array)
+        if np.issubdtype(image_array.dtype, np.floating):
+            image_tensor = torch.from_numpy(image_array).permute(2, 0, 1).float()
+        else:
+            image_tensor = torch.from_numpy(image_array).permute(2, 0, 1).float().div(255.0)
         mask_tensor = torch.from_numpy(mask_array.astype(np.int64, copy=False)).long()
         return image_tensor, mask_tensor
 

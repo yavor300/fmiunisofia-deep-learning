@@ -92,6 +92,14 @@ make train CONFIG=configs/experiments/002_tiny_unet_ce_cosine.yaml RUN_NAME=tiny
 
 Each run writes `history.csv` and `learning_rate.png`.
 
+Compare preprocessing strategies with matched Tiny U-Net runs:
+
+```bash
+make train CONFIG=configs/experiments/011_tiny_unet_resize_only.yaml RUN_NAME=pre_resize_only
+make train CONFIG=configs/experiments/012_tiny_unet_basic_aug.yaml RUN_NAME=pre_basic_aug
+make train CONFIG=configs/experiments/013_tiny_unet_strong_aug_imagenet.yaml RUN_NAME=pre_strong_aug
+```
+
 ## Evaluation
 
 Evaluate a checkpoint with:

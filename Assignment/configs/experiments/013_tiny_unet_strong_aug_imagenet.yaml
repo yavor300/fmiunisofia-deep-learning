@@ -1,0 +1,28 @@
+training:
+  epochs: 5
+  batch_size: 2
+
+scheduler:
+  name: step_decay
+  step_size: 2
+  gamma: 0.5
+
+model:
+  architecture: tiny_unet
+  encoder_name: null
+  encoder_weights: null
+  in_channels: 3
+  num_classes: 19
+  base_channels: 16
+
+loss:
+  name: cross_entropy
+
+preprocessing:
+  resize_height: 512
+  resize_width: 1024
+  crop_height: 512
+  crop_width: 512
+  augmentations: strong_aug
+  eval_augmentations: resize_only
+  normalize: imagenet
