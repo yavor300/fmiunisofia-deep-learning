@@ -1,0 +1,31 @@
+training:
+  epochs: 30
+  batch_size: 4
+  num_workers: 8
+
+scheduler:
+  name: step_decay
+  step_size: 10
+  gamma: 0.1
+
+model:
+  architecture: tiny_unet
+  encoder_name: null
+  encoder_weights: null
+  in_channels: 3
+  num_classes: 19
+  base_channels: 32
+
+loss:
+  name: focal
+  gamma: 2.0
+  alpha: null
+
+preprocessing:
+  resize_height: 512
+  resize_width: 1024
+  crop_height: 512
+  crop_width: 512
+  augmentations: basic_aug
+  eval_augmentations: resize_only
+  normalize: none

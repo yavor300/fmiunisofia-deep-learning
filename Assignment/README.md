@@ -100,6 +100,8 @@ make train CONFIG=configs/experiments/012_tiny_unet_basic_aug.yaml RUN_NAME=pre_
 make train CONFIG=configs/experiments/013_tiny_unet_strong_aug_imagenet.yaml RUN_NAME=pre_strong_aug
 ```
 
+See `docs/experiment_configs.md` for the full experiment command index.
+
 ## Evaluation
 
 Evaluate a checkpoint with:
@@ -115,6 +117,12 @@ make eval CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml CHECKPOINT=check
 ```
 
 Each evaluation run writes `resolved_config.yaml` under `outputs/eval/<run-name>/`.
+
+Evaluation writes global metrics, per-class IoU, a confusion matrix, error analysis, and qualitative examples:
+
+```bash
+make eval CONFIG=configs/experiments/001_tiny_unet_ce_step.yaml CHECKPOINT=outputs/train/demo_train/checkpoints/best.pt RUN_NAME=demo_eval EVAL_SPLIT=val MAX_EXAMPLES=5
+```
 
 ## Exploratory Data Analysis
 

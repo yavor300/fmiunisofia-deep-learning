@@ -2,6 +2,8 @@ CONFIG ?= configs/default.yaml
 CHECKPOINT ?=
 RUN_NAME ?=
 RESUME ?=
+EVAL_SPLIT ?= val
+MAX_EXAMPLES ?= 5
 MAX_TRAIN_MASKS ?=
 MAX_EVAL_MASKS ?=
 VENV_PYTHON := $(wildcard .venv/bin/python)
@@ -30,7 +32,7 @@ train:
 	$(PYTHON) -m src.cityseg.training.train --config $(CONFIG) $(RUN_NAME_ARG) $(RESUME_ARG)
 
 eval:
-	$(PYTHON) -m src.cityseg.training.evaluate --config $(CONFIG) --checkpoint $(CHECKPOINT) $(RUN_NAME_ARG)
+	$(PYTHON) -m src.cityseg.training.evaluate --config $(CONFIG) --checkpoint $(CHECKPOINT) --split $(EVAL_SPLIT) --max-examples $(MAX_EXAMPLES) $(RUN_NAME_ARG)
 
 report:
 	$(PYTHON) -m src.cityseg.reporting.build_model_report --results reports/experiment_results.csv

@@ -1,0 +1,30 @@
+training:
+  epochs: 30
+  batch_size: 4
+  num_workers: 8
+
+scheduler:
+  name: cosine_annealing
+  t_max: 30
+  eta_min: 0.000001
+
+model:
+  architecture: deeplabv3plus
+  encoder_name: resnet50
+  encoder_weights: null
+  in_channels: 3
+  num_classes: 19
+
+loss:
+  name: focal
+  gamma: 2.0
+  alpha: null
+
+preprocessing:
+  resize_height: 512
+  resize_width: 1024
+  crop_height: 512
+  crop_width: 512
+  augmentations: basic_aug
+  eval_augmentations: resize_only
+  normalize: imagenet
