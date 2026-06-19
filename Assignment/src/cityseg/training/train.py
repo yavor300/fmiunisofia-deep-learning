@@ -14,11 +14,14 @@ os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 import matplotlib
 import torch
 from torch import nn
+from tqdm.auto import tqdm
 
 from src.cityseg.config import load_config, prepare_run, save_resolved_config
 from src.cityseg.data.dataloaders import create_train_val_dataloaders
 from src.cityseg.data.label_mapping import decode_train_ids_to_colors
 from src.cityseg.models.factory import create_model
+from src.cityseg.reporting.build_model_report import build_model_report
+from src.cityseg.training.experiment_logger import append_experiment_result
 from src.cityseg.training.losses import (
     CrossEntropyDiceLoss,
     CrossEntropyLoss,
@@ -103,6 +106,7 @@ def train_model(
         )
 
     epochs = int(config.get("training", {}).get("epochs", 1))
+    progress_enabled = bool(config.get("training", {}).get("progress_bar", True))
     patience = config.get("training", {}).get("early_stopping_patience")
     patience = int(patience) if patience is not None else None
     stale_epochs = 0
@@ -117,6 +121,9 @@ def train_model(
             device=device,
             use_amp=use_amp,
             gradient_clip_norm=config.get("training", {}).get("gradient_clip_norm"),
+            epoch=epoch,
+            total_epochs=epochs,
+            progress_enabled=progress_enabled,
         )
         validation = validate_one_epoch(
             model=model,
@@ -125,6 +132,9 @@ def train_model(
             metrics=metrics,
             device=device,
             use_amp=use_amp,
+            epoch=epoch,
+            total_epochs=epochs,
+            progress_enabled=progress_enabled,
         )
         row = {
             "epoch": epoch,
@@ -168,11 +178,49 @@ def train_model(
 
         write_history_csv(history, output_dir / "history.csv")
         write_training_plots(history, output_dir)
+        if progress_enabled:
+            tqdm.write(
+                f"Epoch {epoch}/{epochs} "
+                f"train_loss={row['train_loss']:.4f} "
+                f"val_loss={row['val_loss']:.4f} "
+                f"val_mIoU={row['val_mean_iou']:.4f} "
+                f"val_mDice={row['val_mean_dice']:.4f} "
+                f"val_acc={row['val_pixel_accuracy']:.4f}"
+            )
         if patience is not None and stale_epochs >= patience:
             break
 
     write_predictions_preview(model, val_loader, output_dir / "predictions_preview.png", device)
+    log_training_experiment(config, output_dir, history)
     return output_dir, history
+
+
+def log_training_experiment(
+    config: dict[str, Any],
+    output_dir: Path,
+    history: list[dict[str, float | int]],
+) -> None:
+    if not history:
+        return
+
+    best_row = max(history, key=lambda row: float(row["val_mean_iou"]))
+    reports_dir = Path(config.get("paths", {}).get("reports_dir", "reports"))
+    results_path = reports_dir / "experiment_results.csv"
+    model_report_path = reports_dir / "model_report.xlsx"
+    checkpoint_path = output_dir / "checkpoints" / "best.pt"
+    append_experiment_result(
+        config=config,
+        metrics={
+            "mean_iou": best_row["val_mean_iou"],
+            "mean_dice": best_row["val_mean_dice"],
+            "pixel_accuracy": best_row["val_pixel_accuracy"],
+        },
+        results_path=results_path,
+        experiment_id=output_dir.name,
+        checkpoint_path=checkpoint_path,
+        comments=f"Training run; best epoch {best_row['epoch']} by validation mean IoU.",
+    )
+    build_model_report(results_path=results_path, output_path=model_report_path)
 
 
 def build_loss(config: dict[str, Any]) -> nn.Module:
@@ -226,11 +274,22 @@ def train_one_epoch(
     device: torch.device,
     use_amp: bool,
     gradient_clip_norm: Any,
+    epoch: int | None = None,
+    total_epochs: int | None = None,
+    progress_enabled: bool = True,
 ) -> float:
     model.train()
     total_loss = 0.0
     total_samples = 0
-    for images, masks in dataloader:
+    progress = tqdm(
+        dataloader,
+        desc=_progress_description("train", epoch, total_epochs),
+        unit="batch",
+        dynamic_ncols=True,
+        leave=False,
+        disable=not progress_enabled,
+    )
+    for images, masks in progress:
         images = images.to(device)
         masks = masks.to(device)
         optimizer.zero_grad(set_to_none=True)
@@ -246,6 +305,7 @@ def train_one_epoch(
         batch_size = images.shape[0]
         total_loss += float(loss.detach().cpu()) * batch_size
         total_samples += batch_size
+        progress.set_postfix(loss=f"{total_loss / max(total_samples, 1):.4f}")
     return total_loss / max(total_samples, 1)
 
 
@@ -256,13 +316,24 @@ def validate_one_epoch(
     metrics: SegmentationMetrics,
     device: torch.device,
     use_amp: bool,
+    epoch: int | None = None,
+    total_epochs: int | None = None,
+    progress_enabled: bool = True,
 ) -> dict[str, float]:
     model.eval()
     total_loss = 0.0
     total_samples = 0
     metric_sums = {"mean_iou": 0.0, "mean_dice": 0.0, "pixel_accuracy": 0.0}
     with torch.no_grad():
-        for images, masks in dataloader:
+        progress = tqdm(
+            dataloader,
+            desc=_progress_description("val", epoch, total_epochs),
+            unit="batch",
+            dynamic_ncols=True,
+            leave=False,
+            disable=not progress_enabled,
+        )
+        for images, masks in progress:
             images = images.to(device)
             masks = masks.to(device)
             with autocast_context(use_amp):
@@ -274,6 +345,7 @@ def validate_one_epoch(
             total_samples += batch_size
             for key in metric_sums:
                 metric_sums[key] += float(batch_metrics[key].detach().cpu()) * batch_size
+            progress.set_postfix(loss=f"{total_loss / max(total_samples, 1):.4f}")
 
     denominator = max(total_samples, 1)
     return {
@@ -397,6 +469,12 @@ def write_predictions_preview(
 
 def current_learning_rate(optimizer: torch.optim.Optimizer) -> float:
     return float(optimizer.param_groups[0]["lr"])
+
+
+def _progress_description(stage: str, epoch: int | None, total_epochs: int | None) -> str:
+    if epoch is None or total_epochs is None:
+        return stage
+    return f"epoch {epoch}/{total_epochs} {stage}"
 
 
 def resolve_device(device_name: str) -> torch.device:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -15,20 +14,15 @@ from src.cityseg.config import load_config, prepare_run
 from src.cityseg.constants import CITYSCAPES_CLASSES, IGNORE_INDEX
 from src.cityseg.data.label_mapping import convert_label_ids_to_train_ids
 from src.cityseg.reporting.build_model_report import build_model_report
+from src.cityseg.training.experiment_logger import (
+    BASELINE_EXPERIMENT_ID,
+    EXPERIMENT_RESULT_FIELDS,
+    append_experiment_result,
+)
 
-EXPERIMENT_ID = "000_baseline_majority"
+EXPERIMENT_ID = BASELINE_EXPERIMENT_ID
 MODEL_NAME = "majority_baseline"
-RESULT_FIELDNAMES = [
-    "experiment_id",
-    "model",
-    "split",
-    "mean_iou",
-    "mean_dice",
-    "pixel_accuracy",
-    "majority_class_id",
-    "majority_class_name",
-    "comments",
-]
+RESULT_FIELDNAMES = EXPERIMENT_RESULT_FIELDS
 
 
 def parse_args() -> argparse.Namespace:
@@ -180,32 +174,39 @@ def run_majority_baseline(
         "majority_class_name": CITYSCAPES_CLASSES[majority_class],
         "comments": _build_comment(majority_class, max_train_masks, max_eval_masks),
     }
-    write_experiment_result(result, results_path)
+    append_experiment_result(
+        config=config,
+        metrics=metrics,
+        results_path=results_path,
+        experiment_id=EXPERIMENT_ID,
+        comments=result["comments"],
+    )
     build_model_report(results_path=results_path, output_path=model_report_path)
     print(f"Output directory: {output_dir}")
     return result
 
 
 def write_experiment_result(result: dict[str, Any], results_path: str | Path) -> Path:
-    path = Path(results_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    rows = _read_existing_results(path)
-    rows = [
-        row
-        for row in rows
-        if not (
-            row.get("experiment_id") == result["experiment_id"]
-            and row.get("split") == result["split"]
-        )
-    ]
-    row = {field: result.get(field, "") for field in RESULT_FIELDNAMES}
-    rows = [row] + rows if result["experiment_id"] == EXPERIMENT_ID else rows + [row]
-
-    with path.open("w", encoding="utf-8", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=RESULT_FIELDNAMES)
-        writer.writeheader()
-        writer.writerows(rows)
-    return path
+    config = {
+        "model": {"architecture": result.get("model", MODEL_NAME)},
+        "loss": {"name": "constant_majority"},
+        "optimizer": {"name": "none"},
+        "scheduler": {"name": "none"},
+    }
+    comments = str(result.get("comments", ""))
+    if result.get("split"):
+        comments = f"{comments} Split: {result['split']}.".strip()
+    return append_experiment_result(
+        config=config,
+        metrics={
+            "mean_iou": result.get("mean_iou", ""),
+            "mean_dice": result.get("mean_dice", ""),
+            "pixel_accuracy": result.get("pixel_accuracy", ""),
+        },
+        results_path=results_path,
+        experiment_id=str(result.get("experiment_id", EXPERIMENT_ID)),
+        comments=comments,
+    )
 
 
 def iter_train_id_masks(
@@ -241,13 +242,6 @@ def main() -> None:
 
 def _find_mask_paths(root: Path, split: str) -> list[Path]:
     return sorted((root / "gtFine" / split).glob("*/*_gtFine_labelIds.png"))
-
-
-def _read_existing_results(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        return []
-    with path.open("r", encoding="utf-8", newline="") as file:
-        return list(csv.DictReader(file))
 
 
 def _format_metric(value: float) -> str:

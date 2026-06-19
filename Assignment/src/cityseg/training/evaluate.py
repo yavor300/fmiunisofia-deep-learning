@@ -25,6 +25,8 @@ from src.cityseg.data.label_mapping import (
 )
 from src.cityseg.data.transforms import create_transforms_from_config
 from src.cityseg.models.factory import create_model
+from src.cityseg.reporting.build_model_report import build_model_report
+from src.cityseg.training.experiment_logger import append_experiment_result
 from src.cityseg.training.metrics import compute_confusion_matrix, prepare_predictions
 from src.cityseg.training.train import resolve_device
 
@@ -122,7 +124,35 @@ def evaluate_checkpoint(
         device=device,
         max_examples=max_examples,
     )
+    log_evaluation_experiment(
+        config=config,
+        output_dir=output_dir,
+        checkpoint_path=checkpoint_path,
+        split=split,
+        metrics=metrics,
+    )
     return output_dir, metrics
+
+
+def log_evaluation_experiment(
+    config: dict[str, Any],
+    output_dir: Path,
+    checkpoint_path: Path,
+    split: str,
+    metrics: dict[str, float],
+) -> None:
+    reports_dir = Path(config.get("paths", {}).get("reports_dir", "reports"))
+    results_path = reports_dir / "experiment_results.csv"
+    model_report_path = reports_dir / "model_report.xlsx"
+    append_experiment_result(
+        config=config,
+        metrics=metrics,
+        results_path=results_path,
+        experiment_id=output_dir.name,
+        checkpoint_path=checkpoint_path,
+        comments=f"Evaluation run on the {split} split.",
+    )
+    build_model_report(results_path=results_path, output_path=model_report_path)
 
 
 def write_global_metrics(metrics: dict[str, float], output_path: str | Path) -> Path:

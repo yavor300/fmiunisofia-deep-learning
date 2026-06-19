@@ -70,6 +70,7 @@ def _tiny_config(workspace: Path, epochs: int = 1) -> dict:
             "pin_memory": False,
             "shuffle": False,
             "mixed_precision": False,
+            "progress_bar": False,
             "device": "cpu",
             "early_stopping_patience": None,
         },

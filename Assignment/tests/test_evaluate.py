@@ -53,6 +53,7 @@ def _tiny_config(workspace: Path) -> dict:
             "pin_memory": False,
             "shuffle": False,
             "mixed_precision": False,
+            "progress_bar": False,
             "device": "cpu",
             "gradient_clip_norm": None,
         },

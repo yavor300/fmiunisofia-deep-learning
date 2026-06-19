@@ -16,6 +16,7 @@ training:
   pin_memory: true
   shuffle: true
   mixed_precision: true
+  progress_bar: true
   device: cuda
   gradient_clip_norm: 1.0
   early_stopping_patience: null
