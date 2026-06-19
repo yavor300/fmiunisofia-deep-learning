@@ -9,6 +9,7 @@ import torch
 from torch import nn
 
 from src.cityseg.config import load_config
+from src.cityseg.env import load_env_file
 from src.cityseg.models.tiny_unet import TinyUNet
 
 
@@ -29,6 +30,7 @@ class MajorityBaselineModel(nn.Module):
 
 def create_model(config: dict[str, Any]) -> nn.Module:
     """Instantiate a segmentation model from a config mapping."""
+    load_env_file()
     model_config = _model_config(config)
     architecture = str(model_config.get("architecture", "unet")).lower()
     in_channels = int(model_config.get("in_channels", 3))

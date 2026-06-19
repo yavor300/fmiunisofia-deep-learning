@@ -8,8 +8,10 @@ MAX_TRAIN_MASKS ?=
 MAX_EVAL_MASKS ?=
 VENV_PYTHON := $(wildcard .venv/bin/python)
 VENV_PIP := $(wildcard .venv/bin/pip)
+VENV_STREAMLIT := $(wildcard .venv/bin/streamlit)
 PYTHON ?= $(if $(VENV_PYTHON),.venv/bin/python,python)
 PIP ?= $(if $(VENV_PIP),.venv/bin/pip,pip)
+STREAMLIT ?= $(if $(VENV_STREAMLIT),.venv/bin/streamlit,streamlit)
 RUN_NAME_ARG := $(if $(RUN_NAME),--run-name $(RUN_NAME),)
 RESUME_ARG := $(if $(RESUME),--resume $(RESUME),)
 BASELINE_LIMIT_ARGS := $(if $(MAX_TRAIN_MASKS),--max-train-masks $(MAX_TRAIN_MASKS),) $(if $(MAX_EVAL_MASKS),--max-eval-masks $(MAX_EVAL_MASKS),)
@@ -38,7 +40,7 @@ report:
 	$(PYTHON) -m src.cityseg.reporting.build_model_report --results reports/experiment_results.csv
 
 app:
-	streamlit run app/streamlit_app.py
+	PYTHONPATH=. $(STREAMLIT) run app/streamlit_app.py
 
 test:
 	$(PYTHON) -m unittest discover -s tests -p "test_*.py"
