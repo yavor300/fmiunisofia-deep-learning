@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-make baseline RUN_NAME=000_baseline_majority
+#make baseline RUN_NAME=000_baseline_majority
 
 # architecture_experiments=(
 #   "020_final_tiny_unet_ce_cosine"
