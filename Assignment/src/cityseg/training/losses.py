@@ -113,6 +113,45 @@ class FocalLoss(nn.Module):
         return alpha[target]
 
 
+class LovaszSoftmaxLoss(nn.Module):
+    """Multiclass Lovasz-Softmax loss as a differentiable IoU surrogate."""
+
+    def __init__(self, ignore_index: int = 255) -> None:
+        super().__init__()
+        self.ignore_index = ignore_index
+
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        valid_mask = target != self.ignore_index
+        if not torch.any(valid_mask):
+            return logits.sum() * 0.0
+
+        probabilities = torch.softmax(logits, dim=1).permute(0, 2, 3, 1)
+        probabilities = probabilities[valid_mask]
+        target = target[valid_mask]
+        losses = []
+        for class_id in range(logits.shape[1]):
+            foreground = (target == class_id).to(dtype=probabilities.dtype)
+            if not torch.any(foreground):
+                continue
+            class_errors = (foreground - probabilities[:, class_id]).abs()
+            sorted_errors, permutation = torch.sort(class_errors, descending=True)
+            sorted_foreground = foreground[permutation]
+            losses.append(torch.dot(sorted_errors, _lovasz_gradient(sorted_foreground)))
+        if not losses:
+            return logits.sum() * 0.0
+        return torch.stack(losses).mean()
+
+
+def _lovasz_gradient(sorted_foreground: torch.Tensor) -> torch.Tensor:
+    foreground_sum = sorted_foreground.sum()
+    intersection = foreground_sum - sorted_foreground.cumsum(dim=0)
+    union = foreground_sum + (1.0 - sorted_foreground).cumsum(dim=0)
+    jaccard = 1.0 - intersection / union.clamp_min(1e-7)
+    if sorted_foreground.numel() > 1:
+        jaccard[1:] = jaccard[1:] - jaccard[:-1]
+    return jaccard
+
+
 class CrossEntropyDiceLoss(nn.Module):
     """Weighted sum of cross-entropy and Dice loss."""
 
@@ -132,6 +171,28 @@ class CrossEntropyDiceLoss(nn.Module):
         return (
             self.ce_weight * self.cross_entropy(logits, target)
             + self.dice_weight * self.dice(logits, target)
+        )
+
+
+class CrossEntropyLovaszLoss(nn.Module):
+    """Weighted sum of cross-entropy and Lovasz-Softmax loss."""
+
+    def __init__(
+        self,
+        ignore_index: int = 255,
+        ce_weight: float = 1.0,
+        lovasz_weight: float = 1.0,
+    ) -> None:
+        super().__init__()
+        self.ce_weight = ce_weight
+        self.lovasz_weight = lovasz_weight
+        self.cross_entropy = CrossEntropyLoss(ignore_index=ignore_index)
+        self.lovasz = LovaszSoftmaxLoss(ignore_index=ignore_index)
+
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return (
+            self.ce_weight * self.cross_entropy(logits, target)
+            + self.lovasz_weight * self.lovasz(logits, target)
         )
 
 

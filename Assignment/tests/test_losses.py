@@ -7,10 +7,12 @@ import torch
 from src.cityseg.constants import IGNORE_INDEX
 from src.cityseg.training.losses import (
     CrossEntropyDiceLoss,
+    CrossEntropyLovaszLoss,
     CrossEntropyLoss,
     DiceLoss,
     FocalDiceLoss,
     FocalLoss,
+    LovaszSoftmaxLoss,
 )
 
 
@@ -100,6 +102,36 @@ class TestCrossEntropyDiceLoss(unittest.TestCase):
     def test_when_called_then_finite_scalar_is_returned(self) -> None:
         logits, target = _logits_and_target()
         loss_fn = CrossEntropyDiceLoss(ignore_index=IGNORE_INDEX)
+
+        loss = loss_fn(logits, target)
+
+        self.assertEqual(loss.ndim, 0)
+        self.assertTrue(torch.isfinite(loss).item())
+
+
+class TestLovaszSoftmaxLoss(unittest.TestCase):
+    def test_when_called_with_ignored_pixels_then_finite_scalar_is_returned(self) -> None:
+        logits, target = _logits_and_target()
+        loss_fn = LovaszSoftmaxLoss(ignore_index=IGNORE_INDEX)
+
+        loss = loss_fn(logits, target)
+
+        self.assertEqual(loss.ndim, 0)
+        self.assertTrue(torch.isfinite(loss).item())
+
+    def test_when_backward_is_called_then_logits_receive_gradients(self) -> None:
+        logits, target = _logits_and_target()
+        loss_fn = LovaszSoftmaxLoss(ignore_index=IGNORE_INDEX)
+
+        loss_fn(logits, target).backward()
+
+        self.assertIsNotNone(logits.grad)
+
+
+class TestCrossEntropyLovaszLoss(unittest.TestCase):
+    def test_when_called_then_finite_scalar_is_returned(self) -> None:
+        logits, target = _logits_and_target()
+        loss_fn = CrossEntropyLovaszLoss(ignore_index=IGNORE_INDEX)
 
         loss = loss_fn(logits, target)
 

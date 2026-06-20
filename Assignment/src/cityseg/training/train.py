@@ -24,6 +24,7 @@ from src.cityseg.reporting.build_model_report import build_model_report
 from src.cityseg.training.experiment_logger import append_experiment_result
 from src.cityseg.training.losses import (
     CrossEntropyDiceLoss,
+    CrossEntropyLovaszLoss,
     CrossEntropyLoss,
     DiceLoss,
     FocalDiceLoss,
@@ -238,6 +239,8 @@ def build_loss(config: dict[str, Any]) -> nn.Module:
         )
     if name in {"cross_entropy_dice", "ce_dice"}:
         return CrossEntropyDiceLoss(ignore_index=ignore_index)
+    if name in {"cross_entropy_lovasz", "ce_lovasz"}:
+        return CrossEntropyLovaszLoss(ignore_index=ignore_index)
     if name == "focal_dice":
         return FocalDiceLoss(
             gamma=float(config.get("gamma", 2.0)),

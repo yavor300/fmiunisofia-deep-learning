@@ -12,11 +12,17 @@ from typing import Any
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 import matplotlib
+import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
 from src.cityseg.config import load_config
-from src.cityseg.constants import CITYSCAPES_CLASSES, IGNORE_INDEX, LABEL_ID_TO_TRAIN_ID
+from src.cityseg.constants import (
+    CITYSCAPES_CLASSES,
+    CITYSCAPES_PALETTE,
+    IGNORE_INDEX,
+    LABEL_ID_TO_TRAIN_ID,
+)
 from src.cityseg.data.label_mapping import (
     convert_label_ids_to_train_ids,
     decode_train_ids_to_colors,
@@ -31,7 +37,45 @@ FIGURE_NAMES = {
     "image_size_distribution": "image_size_distribution.png",
     "sample_overlays": "sample_overlays.png",
     "rare_classes_examples": "rare_classes_examples.png",
+    "paper_class_pixels_by_category": "paper_class_pixels_by_category.png",
+    "category_pixel_proportions": "category_pixel_proportions.png",
+    "annotation_summary_table": "annotation_summary_table.png",
+    "traffic_participant_complexity": "traffic_participant_complexity.png",
+    "vehicle_component_area_histogram": "vehicle_component_area_histogram.png",
 }
+CLASS_TO_CATEGORY = {
+    "road": "flat",
+    "sidewalk": "flat",
+    "building": "construction",
+    "wall": "construction",
+    "fence": "construction",
+    "vegetation": "nature",
+    "terrain": "nature",
+    "car": "vehicle",
+    "truck": "vehicle",
+    "bus": "vehicle",
+    "train": "vehicle",
+    "motorcycle": "vehicle",
+    "bicycle": "vehicle",
+    "sky": "sky",
+    "pole": "object",
+    "traffic light": "object",
+    "traffic sign": "object",
+    "person": "human",
+    "rider": "human",
+}
+CATEGORY_ORDER = ("flat", "construction", "nature", "vehicle", "sky", "object", "human")
+TRAFFIC_PARTICIPANT_CLASSES = (
+    "person",
+    "rider",
+    "car",
+    "truck",
+    "bus",
+    "train",
+    "motorcycle",
+    "bicycle",
+)
+VEHICLE_CLASSES = ("car", "truck", "bus", "train", "motorcycle", "bicycle")
 
 
 @dataclass
@@ -50,6 +94,10 @@ class DatasetAnalysis:
     rare_class_examples: dict[str, tuple[Path, Path]] = field(default_factory=dict)
     max_samples_per_split: int | None = None
     analyzed_pair_counts: dict[str, int] = field(default_factory=dict)
+    total_pixel_count: int = 0
+    labeled_pixel_count: int = 0
+    traffic_participant_components_per_image: list[int] = field(default_factory=list)
+    vehicle_component_areas: list[int] = field(default_factory=list)
 
     @property
     def total_images(self) -> int:
@@ -114,6 +162,10 @@ def analyze_cityscapes_dataset(
     sample_pairs: list[tuple[Path, Path]] = []
     class_examples: dict[int, tuple[Path, Path]] = {}
     analyzed_pair_counts: dict[str, int] = {}
+    total_pixel_count = 0
+    labeled_pixel_count = 0
+    traffic_participant_components_per_image: list[int] = []
+    vehicle_component_areas: list[int] = []
 
     for split in SPLITS:
         image_paths = _find_images(root_path, split)
@@ -146,7 +198,7 @@ def analyze_cityscapes_dataset(
             if mask_path not in mask_path_set:
                 continue
 
-            _analyze_pair(
+            total_pixel_count += _analyze_pair(
                 image_path=image_path,
                 mask_path=mask_path,
                 image_size_counts=image_size_counts,
@@ -155,6 +207,8 @@ def analyze_cityscapes_dataset(
                 anomaly_messages=anomaly_messages,
                 sample_pairs=sample_pairs,
                 class_examples=class_examples,
+                traffic_participant_components_per_image=traffic_participant_components_per_image,
+                vehicle_component_areas=vehicle_component_areas,
             )
 
         for mask_path in mask_paths:
@@ -164,6 +218,7 @@ def analyze_cityscapes_dataset(
                 anomaly_messages.append(f"Missing image for mask: {mask_path}")
 
     total_pixels = int(class_counts.sum())
+    labeled_pixel_count = total_pixels
     class_pixel_counts = {
         class_name: int(count)
         for class_name, count in zip(CITYSCAPES_CLASSES, class_counts, strict=True)
@@ -187,6 +242,10 @@ def analyze_cityscapes_dataset(
         rare_class_examples=rare_class_examples,
         max_samples_per_split=max_samples_per_split,
         analyzed_pair_counts=analyzed_pair_counts,
+        total_pixel_count=total_pixel_count,
+        labeled_pixel_count=labeled_pixel_count,
+        traffic_participant_components_per_image=traffic_participant_components_per_image,
+        vehicle_component_areas=vehicle_component_areas,
     )
 
 
@@ -235,6 +294,14 @@ def build_dataset_report(analysis: DatasetAnalysis) -> str:
     lines.extend(
         [
             "",
+            "## Category-Level Summary",
+            "",
+            _format_category_distribution(analysis),
+            "",
+            "The additional EDA figures mirror common semantic-segmentation dataset summaries: "
+            "class pixels grouped by scene category, category-level proportions, label-density "
+            "tables, and semantic-component proxies for traffic-participant scene complexity.",
+            "",
             "## Class Imbalance",
             "",
             _class_imbalance_commentary(analysis, dominant_class, dominant_pct, rare_classes),
@@ -263,6 +330,11 @@ def build_dataset_report(analysis: DatasetAnalysis) -> str:
             f"- `reports/figures/{FIGURE_NAMES['image_size_distribution']}`",
             f"- `reports/figures/{FIGURE_NAMES['sample_overlays']}`",
             f"- `reports/figures/{FIGURE_NAMES['rare_classes_examples']}`",
+            f"- `reports/figures/{FIGURE_NAMES['paper_class_pixels_by_category']}`",
+            f"- `reports/figures/{FIGURE_NAMES['category_pixel_proportions']}`",
+            f"- `reports/figures/{FIGURE_NAMES['annotation_summary_table']}`",
+            f"- `reports/figures/{FIGURE_NAMES['traffic_participant_complexity']}`",
+            f"- `reports/figures/{FIGURE_NAMES['vehicle_component_area_histogram']}`",
             "",
         ]
     )
@@ -284,6 +356,26 @@ def write_figures(analysis: DatasetAnalysis, figures_dir: str | Path) -> None:
     _plot_rare_class_examples(
         analysis.rare_class_examples,
         path / FIGURE_NAMES["rare_classes_examples"],
+    )
+    _plot_paper_class_pixels_by_category(
+        analysis,
+        path / FIGURE_NAMES["paper_class_pixels_by_category"],
+    )
+    _plot_category_pixel_proportions(
+        analysis,
+        path / FIGURE_NAMES["category_pixel_proportions"],
+    )
+    _plot_annotation_summary_table(
+        analysis,
+        path / FIGURE_NAMES["annotation_summary_table"],
+    )
+    _plot_traffic_participant_complexity(
+        analysis,
+        path / FIGURE_NAMES["traffic_participant_complexity"],
+    )
+    _plot_vehicle_component_area_histogram(
+        analysis,
+        path / FIGURE_NAMES["vehicle_component_area_histogram"],
     )
 
 
@@ -348,7 +440,9 @@ def _analyze_pair(
     anomaly_messages: list[str],
     sample_pairs: list[tuple[Path, Path]],
     class_examples: dict[int, tuple[Path, Path]],
-) -> None:
+    traffic_participant_components_per_image: list[int],
+    vehicle_component_areas: list[int],
+) -> int:
     try:
         with Image.open(image_path) as image:
             image = image.convert("RGB")
@@ -359,7 +453,7 @@ def _analyze_pair(
     except (OSError, UnidentifiedImageError) as error:
         anomaly_counts["unreadable_files"] += 1
         anomaly_messages.append(f"Unreadable file in pair {image_path} / {mask_path}: {error}")
-        return
+        return 0
 
     image_size_counts[image_size] += 1
 
@@ -381,8 +475,14 @@ def _analyze_pair(
         for train_id in np.unique(valid_pixels):
             class_examples.setdefault(int(train_id), (image_path, mask_path))
 
+    traffic_participant_components_per_image.append(
+        _count_components_for_classes(train_id_mask, TRAFFIC_PARTICIPANT_CLASSES)
+    )
+    vehicle_component_areas.extend(_component_areas_for_classes(train_id_mask, VEHICLE_CLASSES))
+
     if len(sample_pairs) < 3:
         sample_pairs.append((image_path, mask_path))
+    return int(mask.shape[0] * mask.shape[1])
 
 
 def _record_image_size(
@@ -440,6 +540,19 @@ def _format_size_distribution(size_counts: Counter[tuple[int, int]]) -> str:
     lines = ["| Width | Height | Images |", "| ---: | ---: | ---: |"]
     for (width, height), count in size_counts.most_common():
         lines.append(f"| {width} | {height} | {count} |")
+    return "\n".join(lines)
+
+
+def _format_category_distribution(analysis: DatasetAnalysis) -> str:
+    counts = _category_pixel_counts(analysis)
+    total = sum(counts.values())
+    if total == 0:
+        return "No labeled pixels were found, so category-level statistics are unavailable."
+
+    lines = ["| Category | Pixels | Percentage |", "| --- | ---: | ---: |"]
+    for category in CATEGORY_ORDER:
+        count = counts[category]
+        lines.append(f"| {category} | {count} | {count / total * 100.0:.4f}% |")
     return "\n".join(lines)
 
 
@@ -507,6 +620,167 @@ def _plot_image_size_distribution(analysis: DatasetAnalysis, output_path: Path) 
     plt.close(fig)
 
 
+def _plot_paper_class_pixels_by_category(
+    analysis: DatasetAnalysis,
+    output_path: Path,
+) -> None:
+    fig, ax = plt.subplots(figsize=(14, 4.5))
+    x_positions: list[float] = []
+    labels: list[str] = []
+    counts: list[int] = []
+    colors: list[tuple[float, float, float]] = []
+    category_centers: list[float] = []
+    category_labels: list[str] = []
+    cursor = 0.0
+
+    for category in CATEGORY_ORDER:
+        class_names = _classes_for_category(category)
+        start = cursor
+        for class_name in class_names:
+            x_positions.append(cursor)
+            labels.append(_short_class_label(class_name))
+            counts.append(max(analysis.class_pixel_counts.get(class_name, 0), 1))
+            palette_color = CITYSCAPES_PALETTE[CITYSCAPES_CLASSES.index(class_name)]
+            colors.append(_rgb_to_matplotlib(palette_color))
+            cursor += 1.0
+        category_centers.append((start + cursor - 1.0) / 2.0)
+        category_labels.append(category)
+        cursor += 0.8
+
+    ax.bar(x_positions, counts, color=colors, edgecolor="white", linewidth=0.6)
+    ax.set_yscale("log")
+    ax.set_ylabel("number of pixels")
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(labels, rotation=90, fontsize=8)
+    ax.grid(axis="y", alpha=0.3)
+    for center, category in zip(category_centers, category_labels, strict=True):
+        ax.text(center, 0.02, category, transform=ax.get_xaxis_transform(), ha="center", va="top")
+    ax.set_title("Finely annotated pixels per class, grouped by category")
+    fig.subplots_adjust(bottom=0.32)
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+
+
+def _plot_category_pixel_proportions(
+    analysis: DatasetAnalysis,
+    output_path: Path,
+) -> None:
+    counts = _category_pixel_counts(analysis)
+    total = max(sum(counts.values()), 1)
+    categories = list(CATEGORY_ORDER)
+    proportions = [counts[category] / total for category in categories]
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.bar(categories, proportions, color="#6baed6", edgecolor="white")
+    ax.set_ylabel("proportion")
+    ax.set_ylim(0, max(proportions + [0.01]) * 1.2)
+    ax.set_title("Proportion of annotated pixels per category")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+
+
+def _plot_annotation_summary_table(
+    analysis: DatasetAnalysis,
+    output_path: Path,
+) -> None:
+    density = (
+        analysis.labeled_pixel_count / analysis.total_pixel_count * 100.0
+        if analysis.total_pixel_count
+        else 0.0
+    )
+    rows = [
+        ["images", f"{analysis.total_images:,}"],
+        ["masks", f"{analysis.total_masks:,}"],
+        ["sampled pixels", f"{analysis.total_pixel_count:,}"],
+        ["labeled trainId pixels", f"{analysis.labeled_pixel_count:,}"],
+        ["annotation density", f"{density:.2f}%"],
+        ["train classes", str(len(CITYSCAPES_CLASSES))],
+    ]
+
+    fig, ax = plt.subplots(figsize=(7.5, 2.6))
+    ax.axis("off")
+    table = ax.table(
+        cellText=rows,
+        colLabels=["statistic", "value"],
+        cellLoc="left",
+        colLoc="left",
+        loc="center",
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.0, 1.35)
+    for (row, _column), cell in table.get_celld().items():
+        if row == 0:
+            cell.set_text_props(weight="bold")
+            cell.set_facecolor("#d9eaf7")
+    ax.set_title("Dataset annotation summary", pad=12)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+
+
+def _plot_traffic_participant_complexity(
+    analysis: DatasetAnalysis,
+    output_path: Path,
+) -> None:
+    counts = analysis.traffic_participant_components_per_image
+    if not counts:
+        _write_placeholder_figure(output_path, "No traffic participant components found")
+        return
+
+    bins = [0, 1, 10, 19, 28, 37, 46, 55, 64, 73, 82, 91, np.inf]
+    labels = [
+        "0",
+        "1-9",
+        "10-18",
+        "19-27",
+        "28-36",
+        "37-45",
+        "46-54",
+        "55-63",
+        "64-72",
+        "73-81",
+        "82-90",
+        ">90",
+    ]
+    histogram = np.histogram(counts, bins=bins)[0]
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.bar(labels, histogram, color="#74a9cf", edgecolor="white")
+    ax.set_yscale("log")
+    ax.set_ylabel("number of images")
+    ax.set_xlabel("semantic traffic-participant components per image")
+    ax.set_title("Scene complexity proxy from semantic connected components")
+    ax.tick_params(axis="x", rotation=35)
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+
+
+def _plot_vehicle_component_area_histogram(
+    analysis: DatasetAnalysis,
+    output_path: Path,
+) -> None:
+    areas = analysis.vehicle_component_areas
+    if not areas:
+        _write_placeholder_figure(output_path, "No vehicle components found")
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.hist(areas, bins=30, color="#80cdc1", edgecolor="white")
+    ax.set_yscale("log")
+    ax.set_xlabel("vehicle semantic-component area in pixels")
+    ax.set_ylabel("number of components")
+    ax.set_title("Vehicle component-size distribution")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+
+
 def _plot_sample_overlays(sample_pairs: list[tuple[Path, Path]], output_path: Path) -> None:
     if not sample_pairs:
         _write_placeholder_figure(output_path, "No image/mask pairs found")
@@ -560,6 +834,60 @@ def _load_visualization_arrays(
     color_mask = decode_train_ids_to_colors(train_id_mask)
     overlay = np.clip(image.astype(np.float32) * 0.6 + color_mask.astype(np.float32) * 0.4, 0, 255)
     return image, color_mask, overlay.astype(np.uint8)
+
+
+def _category_pixel_counts(analysis: DatasetAnalysis) -> dict[str, int]:
+    counts = {category: 0 for category in CATEGORY_ORDER}
+    for class_name, pixel_count in analysis.class_pixel_counts.items():
+        category = CLASS_TO_CATEGORY[class_name]
+        counts[category] += pixel_count
+    return counts
+
+
+def _classes_for_category(category: str) -> list[str]:
+    return [
+        class_name
+        for class_name in CITYSCAPES_CLASSES
+        if CLASS_TO_CATEGORY[class_name] == category
+    ]
+
+
+def _short_class_label(class_name: str) -> str:
+    replacements = {
+        "traffic light": "traf. light",
+        "traffic sign": "traf. sign",
+        "motorcycle": "motorc.",
+        "vegetation": "veget.",
+        "building": "build.",
+        "sidewalk": "sidewalk",
+    }
+    return replacements.get(class_name, class_name)
+
+
+def _rgb_to_matplotlib(color: tuple[int, int, int]) -> tuple[float, float, float]:
+    return tuple(channel / 255.0 for channel in color)
+
+
+def _count_components_for_classes(mask: np.ndarray, class_names: tuple[str, ...]) -> int:
+    return sum(len(_component_areas(mask == _train_id(class_name))) for class_name in class_names)
+
+
+def _component_areas_for_classes(mask: np.ndarray, class_names: tuple[str, ...]) -> list[int]:
+    areas: list[int] = []
+    for class_name in class_names:
+        areas.extend(_component_areas(mask == _train_id(class_name)))
+    return areas
+
+
+def _component_areas(binary_mask: np.ndarray) -> list[int]:
+    if not np.any(binary_mask):
+        return []
+    component_count, labels = cv2.connectedComponents(binary_mask.astype(np.uint8), connectivity=8)
+    return [int(np.sum(labels == label_id)) for label_id in range(1, component_count)]
+
+
+def _train_id(class_name: str) -> int:
+    return CITYSCAPES_CLASSES.index(class_name)
 
 
 def _write_placeholder_figure(output_path: Path, message: str) -> None:

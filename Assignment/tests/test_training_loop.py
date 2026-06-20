@@ -99,6 +99,11 @@ class TestBuildLoss(unittest.TestCase):
 
         self.assertIsInstance(loss, torch.nn.Module)
 
+    def test_when_loss_name_is_cross_entropy_lovasz_then_loss_module_is_returned(self) -> None:
+        loss = build_loss({"name": "cross_entropy_lovasz", "ignore_index": 255})
+
+        self.assertIsInstance(loss, torch.nn.Module)
+
 
 class TestBuildOptimizer(unittest.TestCase):
     def test_when_optimizer_name_is_adamw_then_optimizer_is_returned(self) -> None:

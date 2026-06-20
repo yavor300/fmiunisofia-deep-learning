@@ -32,12 +32,24 @@ preprocessing_experiments=(
 )
 
 capacity_experiments=(
-  # "034_final_tiny_unet_16_ce_cosine"
-  # "035_final_tiny_unet_32_ce_cosine"
-  # "036_final_tiny_unet_64_ce_cosine"
-  # "037_final_unet_resnet18_ce_cosine"
-  # "038_final_unet_resnet50_ce_cosine"
+  "034_final_tiny_unet_16_ce_cosine"
+  "035_final_tiny_unet_32_ce_cosine"
+  "036_final_tiny_unet_64_ce_cosine"
+  "037_final_unet_resnet18_ce_cosine"
+  "038_final_unet_resnet50_ce_cosine"
   "039_final_deeplabv3plus_resnet101_ce_cosine"
+)
+
+priority_expansion_experiments=(
+  "040_unet_resnet34_ce_dice_50ep"
+  "041_unet_resnet34_ce_dice_strong_aug"
+  "042_fpn_resnet34_ce_dice"
+  "043_deeplabv3plus_resnet101_ce_dice"
+  "044_unetplusplus_resnet34_ce_dice"
+  "045_unet_efficientnet_b3_ce_dice"
+  "046_fpn_efficientnet_b3_ce_dice"
+  "047_deeplabv3plus_efficientnet_b3_ce_dice"
+  "048_unet_resnet34_ce_lovasz"
 )
 
 experiments=(
@@ -45,7 +57,8 @@ experiments=(
 #  "${scheduler_experiments[@]}"
 #  "${loss_experiments[@]}"
 #  "${preprocessing_experiments[@]}"
-  "${capacity_experiments[@]}"
+#  "${capacity_experiments[@]}"
+  "${priority_expansion_experiments[@]}"
 )
 
 for experiment in "${experiments[@]}"; do

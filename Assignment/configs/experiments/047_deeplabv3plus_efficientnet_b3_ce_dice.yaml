@@ -1,0 +1,35 @@
+experiment:
+  id: 047_deeplabv3plus_efficientnet_b3_ce_dice
+  description: DeepLabV3+ EfficientNet-B3 with CrossEntropy + Dice loss.
+
+training:
+  epochs: 30
+  batch_size: 4
+  num_workers: 8
+  mixed_precision: true
+  progress_bar: true
+
+scheduler:
+  name: cosine_annealing
+  t_max: 30
+  eta_min: 0.000001
+
+model:
+  architecture: deeplabv3plus
+  encoder_name: efficientnet-b3
+  encoder_weights: imagenet
+  in_channels: 3
+  num_classes: 19
+
+loss:
+  name: cross_entropy_dice
+  ignore_index: 255
+
+preprocessing:
+  resize_height: 512
+  resize_width: 1024
+  crop_height: 512
+  crop_width: 512
+  augmentations: basic_aug
+  eval_augmentations: resize_only
+  normalize: imagenet

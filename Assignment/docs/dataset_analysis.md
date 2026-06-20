@@ -44,6 +44,20 @@
 | motorcycle | 371341 | 0.2013% |
 | bicycle | 652639 | 0.3538% |
 
+## Category-Level Summary
+
+| Category | Pixels | Percentage |
+| --- | ---: | ---: |
+| flat | 81652176 | 44.2672% |
+| construction | 45661169 | 24.7549% |
+| nature | 30330326 | 16.4434% |
+| vehicle | 14086005 | 7.6366% |
+| sky | 5431163 | 2.9445% |
+| object | 4701720 | 2.5490% |
+| human | 2590340 | 1.4043% |
+
+The additional EDA figures mirror common semantic-segmentation dataset summaries: class pixels grouped by scene category, category-level proportions, label-density tables, and semantic-component proxies for traffic-participant scene complexity.
+
 ## Class Imbalance
 
 The dominant class is `road` with 38.10% of labeled pixels. The rarest observed classes are: train, rider, motorcycle, traffic light, bus. This imbalance matters for training: plain pixel-wise cross-entropy can over-reward predictions of frequent classes, while focal loss can emphasize hard or under-represented pixels and Dice loss can optimize region overlap so small classes are not judged only by raw pixel volume.
@@ -64,3 +78,8 @@ No structural anomalies were found in the scanned files.
 - `reports/figures/image_size_distribution.png`
 - `reports/figures/sample_overlays.png`
 - `reports/figures/rare_classes_examples.png`
+- `reports/figures/paper_class_pixels_by_category.png`
+- `reports/figures/category_pixel_proportions.png`
+- `reports/figures/annotation_summary_table.png`
+- `reports/figures/traffic_participant_complexity.png`
+- `reports/figures/vehicle_component_area_histogram.png`
