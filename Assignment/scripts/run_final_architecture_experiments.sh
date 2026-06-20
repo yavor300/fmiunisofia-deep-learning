@@ -32,11 +32,12 @@ preprocessing_experiments=(
 )
 
 capacity_experiments=(
-  "034_final_tiny_unet_16_ce_cosine"
-  "035_final_tiny_unet_32_ce_cosine"
-  "036_final_tiny_unet_64_ce_cosine"
-  "037_final_unet_resnet18_ce_cosine"
-  "038_final_unet_resnet50_ce_cosine"
+  # "034_final_tiny_unet_16_ce_cosine"
+  # "035_final_tiny_unet_32_ce_cosine"
+  # "036_final_tiny_unet_64_ce_cosine"
+  # "037_final_unet_resnet18_ce_cosine"
+  # "038_final_unet_resnet50_ce_cosine"
+  "039_final_deeplabv3plus_resnet101_ce_cosine"
 )
 
 experiments=(
