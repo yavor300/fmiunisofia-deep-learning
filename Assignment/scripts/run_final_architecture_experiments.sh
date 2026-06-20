@@ -5,14 +5,14 @@ cd "$(dirname "$0")/.."
 
 #make baseline RUN_NAME=000_baseline_majority
 
-# architecture_experiments=(
-#   "020_final_tiny_unet_ce_cosine"
-#   "021_final_unet_resnet34_ce_cosine"
-#   "022_final_unetplusplus_resnet34_ce_cosine"
-#   "023_final_fpn_resnet34_ce_cosine"
-#   "024_final_pspnet_resnet34_ce_cosine"
-#   "025_final_deeplabv3plus_resnet50_ce_cosine"
-# )
+architecture_experiments=(
+  "020_final_tiny_unet_ce_cosine"
+  "021_final_unet_resnet34_ce_cosine"
+  "022_final_unetplusplus_resnet34_ce_cosine"
+  "023_final_fpn_resnet34_ce_cosine"
+  "024_final_pspnet_resnet34_ce_cosine"
+  "025_final_deeplabv3plus_resnet50_ce_cosine"
+)
 
 scheduler_experiments=(
   "026_final_unet_resnet34_ce_step"
@@ -31,11 +31,20 @@ preprocessing_experiments=(
   "033_final_unet_resnet34_strong_aug_ce_cosine"
 )
 
+capacity_experiments=(
+  "034_final_tiny_unet_16_ce_cosine"
+  "035_final_tiny_unet_32_ce_cosine"
+  "036_final_tiny_unet_64_ce_cosine"
+  "037_final_unet_resnet18_ce_cosine"
+  "038_final_unet_resnet50_ce_cosine"
+)
+
 experiments=(
 #  "${architecture_experiments[@]}"
-  "${scheduler_experiments[@]}"
-  "${loss_experiments[@]}"
-  "${preprocessing_experiments[@]}"
+#  "${scheduler_experiments[@]}"
+#  "${loss_experiments[@]}"
+#  "${preprocessing_experiments[@]}"
+  "${capacity_experiments[@]}"
 )
 
 for experiment in "${experiments[@]}"; do

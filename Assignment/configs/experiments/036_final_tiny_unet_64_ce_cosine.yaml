@@ -1,0 +1,31 @@
+training:
+  epochs: 30
+  batch_size: 4
+  num_workers: 8
+  mixed_precision: true
+  progress_bar: true
+
+scheduler:
+  name: cosine_annealing
+  t_max: 30
+  eta_min: 0.000001
+
+model:
+  architecture: tiny_unet
+  encoder_name: null
+  encoder_weights: null
+  in_channels: 3
+  num_classes: 19
+  base_channels: 64
+
+loss:
+  name: cross_entropy
+
+preprocessing:
+  resize_height: 512
+  resize_width: 1024
+  crop_height: 512
+  crop_width: 512
+  augmentations: basic_aug
+  eval_augmentations: resize_only
+  normalize: none
