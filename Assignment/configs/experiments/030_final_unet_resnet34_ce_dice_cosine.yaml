@@ -2,6 +2,8 @@ training:
   epochs: 30
   batch_size: 4
   num_workers: 8
+  mixed_precision: true
+  progress_bar: true
 
 scheduler:
   name: cosine_annealing
@@ -11,12 +13,12 @@ scheduler:
 model:
   architecture: unet
   encoder_name: resnet34
-  encoder_weights: null
+  encoder_weights: imagenet
   in_channels: 3
   num_classes: 19
 
 loss:
-  name: cross_entropy
+  name: cross_entropy_dice
 
 preprocessing:
   resize_height: 512

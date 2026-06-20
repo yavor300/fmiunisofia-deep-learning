@@ -2,6 +2,8 @@ training:
   epochs: 30
   batch_size: 4
   num_workers: 8
+  mixed_precision: true
+  progress_bar: true
 
 scheduler:
   name: cosine_annealing
@@ -9,9 +11,9 @@ scheduler:
   eta_min: 0.000001
 
 model:
-  architecture: deeplabv3plus
-  encoder_name: resnet50
-  encoder_weights: null
+  architecture: unet
+  encoder_name: resnet34
+  encoder_weights: imagenet
   in_channels: 3
   num_classes: 19
 
@@ -21,8 +23,8 @@ loss:
 preprocessing:
   resize_height: 512
   resize_width: 1024
-  crop_height: 512
-  crop_width: 512
-  augmentations: basic_aug
+  crop_height: null
+  crop_width: null
+  augmentations: resize_only
   eval_augmentations: resize_only
   normalize: imagenet
