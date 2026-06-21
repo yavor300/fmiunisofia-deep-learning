@@ -52,13 +52,17 @@ priority_expansion_experiments=(
   "048_unet_resnet34_ce_lovasz"
 )
 
+optional_experiments=(
+  "049_segformer_mit_b1_ce_dice_optional"
+)
+
 experiments=(
 #  "${architecture_experiments[@]}"
 #  "${scheduler_experiments[@]}"
 #  "${loss_experiments[@]}"
 #  "${preprocessing_experiments[@]}"
 #  "${capacity_experiments[@]}"
-  "${priority_expansion_experiments[@]}"
+#  "${priority_expansion_experiments[@]}"
 )
 
 for experiment in "${experiments[@]}"; do
@@ -66,6 +70,24 @@ for experiment in "${experiments[@]}"; do
   checkpoint="outputs/train/${experiment}/checkpoints/best.pt"
 
   make model-shape CONFIG="${config}"
+  make train CONFIG="${config}" RUN_NAME="${experiment}"
+  make eval \
+    CONFIG="${config}" \
+    CHECKPOINT="${checkpoint}" \
+    RUN_NAME="${experiment}_eval" \
+    EVAL_SPLIT=val \
+    MAX_EXAMPLES=5
+done
+
+for experiment in "${optional_experiments[@]}"; do
+  config="configs/experiments/${experiment}.yaml"
+  checkpoint="outputs/train/${experiment}/checkpoints/best.pt"
+
+  if ! make model-shape CONFIG="${config}"; then
+    echo "Skipping optional experiment ${experiment}; model dependencies are unavailable."
+    continue
+  fi
+
   make train CONFIG="${config}" RUN_NAME="${experiment}"
   make eval \
     CONFIG="${config}" \

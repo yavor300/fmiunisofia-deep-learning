@@ -5,7 +5,7 @@ import unittest
 import torch
 from torch import nn
 
-from src.cityseg.models.factory import MajorityBaselineModel, create_model
+from src.cityseg.models.factory import MajorityBaselineModel, _segformer_model_id, create_model
 from src.cityseg.models.tiny_unet import TinyUNet
 
 
@@ -74,6 +74,11 @@ class TestCreateModel(unittest.TestCase):
         model = create_model(config)
 
         self.assertIsInstance(model, nn.Module)
+
+    def test_when_segformer_encoder_is_mit_b1_then_hf_model_id_is_returned(self) -> None:
+        model_id = _segformer_model_id("mit_b1", "imagenet")
+
+        self.assertEqual(model_id, "nvidia/mit-b1")
 
 
 if __name__ == "__main__":

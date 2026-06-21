@@ -6,6 +6,7 @@ import argparse
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 from src.cityseg.config import load_config
@@ -28,6 +29,41 @@ class MajorityBaselineModel(nn.Module):
         return logits
 
 
+class SegFormerSegmentationModel(nn.Module):
+    """Hugging Face SegFormer wrapper that returns `[B, C, H, W]` logits."""
+
+    def __init__(
+        self,
+        encoder_name: str,
+        encoder_weights: str | None,
+        num_classes: int,
+    ) -> None:
+        super().__init__()
+        try:
+            from transformers import SegformerForSemanticSegmentation
+        except ImportError as error:
+            raise ImportError(
+                "The optional SegFormer experiment requires `transformers`. "
+                "Install dependencies with `make install` before running it."
+            ) from error
+
+        model_id = _segformer_model_id(encoder_name, encoder_weights)
+        self.model = SegformerForSemanticSegmentation.from_pretrained(
+            model_id,
+            num_labels=num_classes,
+            ignore_mismatched_sizes=True,
+        )
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        outputs = self.model(pixel_values=inputs)
+        return F.interpolate(
+            outputs.logits,
+            size=inputs.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
+        )
+
+
 def create_model(config: dict[str, Any]) -> nn.Module:
     """Instantiate a segmentation model from a config mapping."""
     load_env_file()
@@ -48,7 +84,13 @@ def create_model(config: dict[str, Any]) -> nn.Module:
             base_channels=int(model_config.get("base_channels", 32)),
         )
     if architecture == "segformer":
-        raise NotImplementedError("SegFormer requires a separate implementation path.")
+        if in_channels != 3:
+            raise ValueError("SegFormer supports only 3-channel RGB inputs.")
+        return SegFormerSegmentationModel(
+            encoder_name=str(model_config.get("encoder_name", "mit_b1")),
+            encoder_weights=model_config.get("encoder_weights"),
+            num_classes=num_classes,
+        )
 
     return _create_smp_model(
         architecture=architecture,
@@ -100,6 +142,24 @@ def _model_config(config: dict[str, Any]) -> dict[str, Any]:
     if isinstance(nested, dict):
         return nested
     return config
+
+
+def _segformer_model_id(encoder_name: str, encoder_weights: str | None) -> str:
+    normalized = encoder_name.replace("-", "_").lower()
+    if encoder_weights in {None, "none", ""}:
+        return f"nvidia/{normalized.replace('_', '-')}"
+    model_ids = {
+        "mit_b0": "nvidia/mit-b0",
+        "mit_b1": "nvidia/mit-b1",
+        "mit_b2": "nvidia/mit-b2",
+        "mit_b3": "nvidia/mit-b3",
+        "mit_b4": "nvidia/mit-b4",
+        "mit_b5": "nvidia/mit-b5",
+    }
+    if normalized not in model_ids:
+        supported = ", ".join(sorted(model_ids))
+        raise ValueError(f"Unsupported SegFormer encoder '{encoder_name}'. Supported: {supported}")
+    return model_ids[normalized]
 
 
 def parse_args() -> argparse.Namespace:

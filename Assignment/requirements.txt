@@ -2,6 +2,7 @@ torch
 torchvision
 segmentation-models-pytorch
 timm
+transformers
 albumentations
 opencv-python
 numpy

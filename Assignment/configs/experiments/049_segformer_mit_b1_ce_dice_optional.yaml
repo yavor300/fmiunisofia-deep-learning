@@ -1,0 +1,35 @@
+experiment:
+  id: 049_segformer_mit_b1_ce_dice_optional
+  description: Optional transformer-based SegFormer experiment with MiT-B1 backbone.
+
+training:
+  epochs: 30
+  batch_size: 2
+  num_workers: 8
+  mixed_precision: true
+  progress_bar: true
+
+scheduler:
+  name: cosine_annealing
+  t_max: 30
+  eta_min: 0.000001
+
+model:
+  architecture: segformer
+  encoder_name: mit_b1
+  encoder_weights: imagenet
+  in_channels: 3
+  num_classes: 19
+
+loss:
+  name: cross_entropy_dice
+  ignore_index: 255
+
+preprocessing:
+  resize_height: 512
+  resize_width: 1024
+  crop_height: 512
+  crop_width: 512
+  augmentations: basic_aug
+  eval_augmentations: resize_only
+  normalize: imagenet
