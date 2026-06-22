@@ -99,7 +99,3 @@ class TestCityscapesDatasetGetItem(unittest.TestCase):
 
             self.assertEqual(tuple(image.shape), (3, 2, 4))
             self.assertEqual(tuple(mask.shape), (2, 4))
-
-
-if __name__ == "__main__":
-    unittest.main()

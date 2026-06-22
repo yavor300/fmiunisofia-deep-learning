@@ -122,7 +122,3 @@ class TestEvaluateCheckpoint(unittest.TestCase):
             with (output_dir / "global_metrics.csv").open("r", encoding="utf-8") as file:
                 row = next(csv.DictReader(file))
             self.assertEqual(set(row), {"mean_iou", "mean_dice", "pixel_accuracy"})
-
-
-if __name__ == "__main__":
-    unittest.main()

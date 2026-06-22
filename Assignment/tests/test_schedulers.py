@@ -58,7 +58,3 @@ class TestStepScheduler(unittest.TestCase):
         step_scheduler(scheduler, validation_metric=0.4)
 
         self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 0.05)
-
-
-if __name__ == "__main__":
-    unittest.main()

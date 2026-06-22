@@ -119,7 +119,3 @@ class TestSegmentationMetrics(unittest.TestCase):
         score = mean_iou(prediction, target, num_classes=2)
 
         self.assertEqual(score.device, device)
-
-
-if __name__ == "__main__":
-    unittest.main()

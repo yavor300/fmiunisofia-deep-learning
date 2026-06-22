@@ -148,7 +148,3 @@ class TestFocalDiceLoss(unittest.TestCase):
 
         self.assertEqual(loss.ndim, 0)
         self.assertTrue(torch.isfinite(loss).item())
-
-
-if __name__ == "__main__":
-    unittest.main()

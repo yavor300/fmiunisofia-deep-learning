@@ -72,7 +72,3 @@ class TestGetPalette(unittest.TestCase):
 
         self.assertEqual(len(palette), 19)
         self.assertTrue(all(len(color) == 3 for color in palette))
-
-
-if __name__ == "__main__":
-    unittest.main()

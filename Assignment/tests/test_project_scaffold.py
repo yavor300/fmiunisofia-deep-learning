@@ -30,7 +30,3 @@ class TestSyntheticSegmentationSample(unittest.TestCase):
 
     def test_when_synthetic_mask_is_created_then_expected_class_ids_are_present(self) -> None:
         self.assertEqual({value for row in self.mask for value in row}, {0, 1})
-
-
-if __name__ == "__main__":
-    unittest.main()

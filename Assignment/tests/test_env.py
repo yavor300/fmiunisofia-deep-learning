@@ -57,7 +57,3 @@ def _restore_env(key: str, value: str | None) -> None:
         os.environ.pop(key, None)
     else:
         os.environ[key] = value
-
-
-if __name__ == "__main__":
-    unittest.main()

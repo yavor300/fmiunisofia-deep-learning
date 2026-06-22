@@ -79,7 +79,3 @@ class TestCreateModel(unittest.TestCase):
         model_id = _segformer_model_id("mit_b1", "imagenet")
 
         self.assertEqual(model_id, "nvidia/mit-b1")
-
-
-if __name__ == "__main__":
-    unittest.main()

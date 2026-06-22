@@ -147,7 +147,3 @@ class TestRunMajorityBaseline(unittest.TestCase):
             resolved_config_path = output_dir / "baseline" / "test_run" / "resolved_config.yaml"
 
             self.assertTrue(resolved_config_path.exists())
-
-
-if __name__ == "__main__":
-    unittest.main()

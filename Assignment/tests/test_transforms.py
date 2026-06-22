@@ -163,7 +163,3 @@ class TestCityscapesDatasetWithTransforms(unittest.TestCase):
             self.assertEqual(tuple(image.shape), (3, 4, 4))
             self.assertGreater(float(image.abs().mean()), 0.1)
             self.assertEqual(tuple(mask.shape), (4, 4))
-
-
-if __name__ == "__main__":
-    unittest.main()

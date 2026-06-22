@@ -28,7 +28,3 @@ class TestBuildModelReport(unittest.TestCase):
             sheet = workbook.active
             self.assertEqual(sheet["A2"].value, "000_baseline_majority")
             self.assertEqual(sheet["A3"].value, "001_other")
-
-
-if __name__ == "__main__":
-    unittest.main()

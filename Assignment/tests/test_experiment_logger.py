@@ -105,7 +105,3 @@ class TestAppendExperimentResult(unittest.TestCase):
             self.assertEqual(rows[1]["mean_iou_change_vs_baseline_pct"], "50.000000")
             self.assertEqual(rows[1]["mean_dice_change_vs_baseline_pct"], "100.000000")
             self.assertEqual(rows[1]["pixel_accuracy_change_vs_baseline_pct"], "12.500000")
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -140,7 +140,3 @@ class TestImageToPngBytes(unittest.TestCase):
         png_bytes = streamlit_app.image_to_png_bytes(image)
 
         self.assertTrue(png_bytes.startswith(b"\x89PNG"))
-
-
-if __name__ == "__main__":
-    unittest.main()

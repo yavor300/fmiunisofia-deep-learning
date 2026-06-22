@@ -141,7 +141,3 @@ class TestRunAnalysisFromConfig(unittest.TestCase):
             self.assertTrue(
                 (reports_dir / "figures" / "paper_class_pixels_by_category.png").exists()
             )
-
-
-if __name__ == "__main__":
-    unittest.main()

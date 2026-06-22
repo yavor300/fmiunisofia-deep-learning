@@ -62,7 +62,3 @@ class TestCreateTrainValDataloaders(unittest.TestCase):
 
             self.assertEqual(tuple(next(iter(train_loader))[0].shape), (1, 3, 4, 4))
             self.assertEqual(tuple(next(iter(val_loader))[0].shape), (1, 3, 4, 4))
-
-
-if __name__ == "__main__":
-    unittest.main()

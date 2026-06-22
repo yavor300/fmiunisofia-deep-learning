@@ -160,7 +160,3 @@ class TestTrainModel(unittest.TestCase):
             with (output_dir / "history.csv").open("r", encoding="utf-8", newline="") as file:
                 rows = list(csv.DictReader(file))
             self.assertEqual(rows[-1]["epoch"], "2")
-
-
-if __name__ == "__main__":
-    unittest.main()
