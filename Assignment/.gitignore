@@ -13,6 +13,7 @@ runs/
 reports/*.csv
 reports/*.xlsx
 reports/*.png
+reports/*.Identifier
 reports/figures/
 
 # Python environments and caches

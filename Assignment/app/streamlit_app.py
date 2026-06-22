@@ -33,6 +33,15 @@ ARCHITECTURES = (
     "fpn",
     "pspnet",
     "deeplabv3plus",
+    "segformer",
+)
+ENCODERS = (
+    "resnet18",
+    "resnet34",
+    "resnet50",
+    "resnet101",
+    "efficientnet-b3",
+    "mit_b1",
 )
 
 
@@ -66,6 +75,7 @@ def main() -> None:
             encoder_name=settings["encoder_name"],
             resize_height=settings["resize_height"],
             resize_width=settings["resize_width"],
+            use_checkpoint_model_config=settings["use_checkpoint_model_config"],
         )
         prediction = predict_image(model=model, image=image, config=config, device=device)
     except Exception as error:
@@ -108,8 +118,16 @@ def main() -> None:
 def render_sidebar() -> dict[str, Any]:
     st.sidebar.header("Inference settings")
     checkpoint_path = st.sidebar.text_input("Checkpoint path", DEFAULT_CHECKPOINT_PATH)
+    checkpoint_summary = checkpoint_model_summary(resolve_project_path(checkpoint_path))
+    use_checkpoint_model_config = st.sidebar.checkbox(
+        "Use model settings from checkpoint",
+        value=True,
+        help="Recommended. This prevents architecture and encoder mismatches.",
+    )
+    if checkpoint_summary:
+        st.sidebar.caption(f"Checkpoint model: {checkpoint_summary}")
     architecture = st.sidebar.selectbox("Model architecture", ARCHITECTURES, index=0)
-    encoder_name = st.sidebar.text_input("Encoder", "resnet34")
+    encoder_name = st.sidebar.selectbox("Encoder", ENCODERS, index=1)
     resize_height = st.sidebar.number_input("Image height", min_value=64, max_value=2048, value=512)
     resize_width = st.sidebar.number_input("Image width", min_value=64, max_value=4096, value=1024)
     opacity = st.sidebar.slider("Overlay opacity", min_value=0.0, max_value=1.0, value=0.45)
@@ -118,6 +136,7 @@ def render_sidebar() -> dict[str, Any]:
         "checkpoint_path": checkpoint_path,
         "architecture": architecture,
         "encoder_name": encoder_name,
+        "use_checkpoint_model_config": bool(use_checkpoint_model_config),
         "resize_height": int(resize_height),
         "resize_width": int(resize_width),
         "opacity": float(opacity),
@@ -132,6 +151,7 @@ def load_model_resource(
     encoder_name: str,
     resize_height: int,
     resize_width: int,
+    use_checkpoint_model_config: bool,
 ) -> tuple[torch.nn.Module, dict[str, Any], torch.device]:
     config = build_inference_config(
         checkpoint_path=checkpoint_path,
@@ -139,6 +159,7 @@ def load_model_resource(
         encoder_name=encoder_name,
         resize_height=resize_height,
         resize_width=resize_width,
+        use_checkpoint_model_config=use_checkpoint_model_config,
     )
     device = resolve_device(config.get("training", {}).get("device", "cuda"))
     model = create_model(config).to(device)
@@ -155,18 +176,22 @@ def build_inference_config(
     encoder_name: str,
     resize_height: int,
     resize_width: int,
+    use_checkpoint_model_config: bool = True,
 ) -> dict[str, Any]:
     checkpoint_config = _checkpoint_config(Path(checkpoint_path))
     config = load_config(DEFAULT_CONFIG_PATH)
     config = _deep_update(config, checkpoint_config)
     config.setdefault("model", {})
-    config["model"]["architecture"] = architecture
-    if architecture == "tiny_unet":
-        config["model"]["encoder_name"] = None
+    if use_checkpoint_model_config and checkpoint_config.get("model"):
         config["model"]["encoder_weights"] = None
     else:
-        config["model"]["encoder_name"] = encoder_name
-        config["model"]["encoder_weights"] = None
+        config["model"]["architecture"] = architecture
+        if architecture == "tiny_unet":
+            config["model"]["encoder_name"] = None
+            config["model"]["encoder_weights"] = None
+        else:
+            config["model"]["encoder_name"] = encoder_name
+            config["model"]["encoder_weights"] = None
     config.setdefault("preprocessing", {})
     config["preprocessing"]["resize_height"] = resize_height
     config["preprocessing"]["resize_width"] = resize_width
@@ -251,6 +276,18 @@ def resolve_project_path(path: str | Path) -> Path:
     if candidate.is_absolute():
         return candidate
     return PROJECT_ROOT / candidate
+
+
+def checkpoint_model_summary(checkpoint_path: Path) -> str | None:
+    config = _checkpoint_config(checkpoint_path)
+    model_config = config.get("model", {})
+    if not isinstance(model_config, dict):
+        return None
+    architecture = model_config.get("architecture")
+    if not architecture:
+        return None
+    encoder_name = model_config.get("encoder_name") or "none"
+    return f"{architecture} / {encoder_name}"
 
 
 def render_legend() -> None:

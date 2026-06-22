@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
 import numpy as np
+import torch
 from PIL import Image
 
 
@@ -19,6 +21,78 @@ def _load_streamlit_app():
 
 
 streamlit_app = _load_streamlit_app()
+
+
+class TestFrontendOptions(unittest.TestCase):
+    def test_when_architecture_options_are_loaded_then_segformer_is_available(self) -> None:
+        self.assertIn("segformer", streamlit_app.ARCHITECTURES)
+
+    def test_when_encoder_options_are_loaded_then_mit_b1_is_available(self) -> None:
+        self.assertIn("mit_b1", streamlit_app.ENCODERS)
+
+
+class TestBuildInferenceConfig(unittest.TestCase):
+    def test_when_checkpoint_model_config_is_used_then_checkpoint_architecture_is_preserved(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            checkpoint_path = Path(temp_dir) / "best.pt"
+            torch.save(
+                {
+                    "config": {
+                        "model": {
+                            "architecture": "fpn",
+                            "encoder_name": "efficientnet-b3",
+                            "encoder_weights": "imagenet",
+                            "num_classes": 19,
+                        }
+                    }
+                },
+                checkpoint_path,
+            )
+
+            config = streamlit_app.build_inference_config(
+                checkpoint_path=str(checkpoint_path),
+                architecture="tiny_unet",
+                encoder_name="resnet34",
+                resize_height=128,
+                resize_width=256,
+                use_checkpoint_model_config=True,
+            )
+
+        self.assertEqual(config["model"]["architecture"], "fpn")
+        self.assertEqual(config["model"]["encoder_name"], "efficientnet-b3")
+        self.assertIsNone(config["model"]["encoder_weights"])
+
+    def test_when_manual_model_config_is_used_then_sidebar_architecture_is_applied(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            checkpoint_path = Path(temp_dir) / "best.pt"
+            torch.save(
+                {
+                    "config": {
+                        "model": {
+                            "architecture": "fpn",
+                            "encoder_name": "efficientnet-b3",
+                            "encoder_weights": "imagenet",
+                            "num_classes": 19,
+                        }
+                    }
+                },
+                checkpoint_path,
+            )
+
+            config = streamlit_app.build_inference_config(
+                checkpoint_path=str(checkpoint_path),
+                architecture="tiny_unet",
+                encoder_name="resnet34",
+                resize_height=128,
+                resize_width=256,
+                use_checkpoint_model_config=False,
+            )
+
+        self.assertEqual(config["model"]["architecture"], "tiny_unet")
+        self.assertIsNone(config["model"]["encoder_name"])
+        self.assertIsNone(config["model"]["encoder_weights"])
 
 
 class TestPreprocessImage(unittest.TestCase):
