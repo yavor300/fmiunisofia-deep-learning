@@ -15,6 +15,7 @@ reports/*.xlsx
 reports/*.png
 reports/*.Identifier
 reports/figures/
+reports/presentation_assets
 
 # Python environments and caches
 .venv/
