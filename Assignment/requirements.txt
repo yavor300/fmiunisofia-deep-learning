@@ -16,4 +16,5 @@ tqdm
 openpyxl
 streamlit
 pytest
+coverage
 ruff

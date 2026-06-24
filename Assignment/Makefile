@@ -16,7 +16,7 @@ RUN_NAME_ARG := $(if $(RUN_NAME),--run-name $(RUN_NAME),)
 RESUME_ARG := $(if $(RESUME),--resume $(RESUME),)
 BASELINE_LIMIT_ARGS := $(if $(MAX_TRAIN_MASKS),--max-train-masks $(MAX_TRAIN_MASKS),) $(if $(MAX_EVAL_MASKS),--max-eval-masks $(MAX_EVAL_MASKS),)
 
-.PHONY: install eda baseline model-shape train eval report app test
+.PHONY: install eda baseline model-shape train eval report app test coverage
 
 install:
 	$(PIP) install -r requirements.txt
@@ -44,3 +44,8 @@ app:
 
 test:
 	$(PYTHON) -m unittest discover -s tests -p "test_*.py"
+
+coverage:
+	$(PYTHON) -m coverage run -m unittest discover -s tests -p "test_*.py"
+	$(PYTHON) -m coverage report
+	$(PYTHON) -m coverage html

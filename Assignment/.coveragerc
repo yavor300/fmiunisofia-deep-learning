@@ -1,0 +1,22 @@
+[run]
+branch = True
+source =
+    src/cityseg
+omit =
+    */__pycache__/*
+    */site-packages/*
+
+[report]
+show_missing = True
+skip_empty = True
+precision = 2
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml
