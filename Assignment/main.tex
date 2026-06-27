@@ -1,0 +1,825 @@
+% !TeX program = pdflatex
+% Converted from Markdown for Overleaf/pdfLaTeX.
+% This file intentionally avoids fontspec and is compatible with pdfLaTeX.
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{cmap}
+\usepackage[T2A]{fontenc}
+\usepackage[english,bulgarian]{babel}
+\selectlanguage{bulgarian}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{amsmath}
+\usepackage{longtable,booktabs,array,multirow}
+\usepackage{pdflscape}
+\usepackage{etoolbox}
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\LTcapwidth}{\textwidth}
+\usepackage{enumitem}
+\setlist{itemsep=2pt,topsep=4pt}
+\usepackage{fancyvrb}
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{verbatim}{Verbatim}{breaklines=true,breakanywhere=true,fontsize=\small}
+
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\pandocbounded}[1]{#1}
+\providecommand{\passthrough}[1]{#1}
+\sloppy
+\hbadness=10000
+\hfuzz=1000pt
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\metric}[1]{\textbf{#1}}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+{\Large Софийски университет ``Св. Климент Охридски''\\[0.3cm]}
+{\Large Факултет по математика и информатика\\[0.3cm]}
+{\large Предмет: Въведение в дълбокото самообучение\\[1.5cm]}
+
+{\Huge\bfseries Тема: 3. Семантично сегментиране на снимки\\[0.8cm]}
+{\Large Проектна документация\\[1.5cm]}
+
+\begin{tabular}{rl}
+Изготвил: & Явор Чамов \\
+Факултетен номер: & 4MI3400787 \\
+Финален модел: & FPN + EfficientNet-B3 + CE Dice \\
+\end{tabular}
+
+\vfill
+{\large \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Резюме}
+
+Настоящият документ описва цялостната реализация на проект за \textbf{семантично сегментиране} върху \textbf{Cityscapes Dataset}. Целта е да се обучат и сравнят различни невронни архитектури, които приемат RGB изображение от градска сцена и връщат маска, в която всеки пиксел е класифициран към един от 19 семантични класа.
+
+Проектът следва пълен работен процес: подготовка на данни, exploratory data analysis, имплементация на training pipeline, сравнение на архитектури, loss функции и learning-rate schedulers, изграждане на model report и Streamlit demo приложение. Основният план за реализация включва изисквания за Cityscapes dataset, сравнение на Cross Entropy, Dice и Focal loss, експерименти с autoencoder/U-Net тип мрежа, cosine annealing и step decay scheduler-и, Streamlit интерфейс и tests.
+
+Финално най-добър модел е избран \code{046\_fpn\_efficientnet\_b3\_ce\_dice}, който използва \textbf{FPN архитектура}, \textbf{EfficientNet-B3 encoder}, ImageNet pretrained weights, \textbf{Cross Entropy + Dice loss} и \textbf{Cosine Annealing scheduler}. Моделът постига:
+
+\begin{itemize}
+  \item \metric{mean IoU} = 0.7283;
+  \item \metric{mean Dice} = 0.8335;
+  \item \metric{pixel accuracy} = 0.9503.
+\end{itemize}
+
+\section{Въведение}
+
+Семантичното сегментиране е задача от компютърното зрение, при която всеки пиксел от изображението се класифицира към предварително дефиниран клас. За разлика от image classification, където се предсказва един клас за цялото изображение, и object detection, където се предсказват bounding boxes, semantic segmentation връща плътна двумерна карта на класовете.
+
+Тази задача е особено важна при автономно шофиране и анализ на градски сцени, защото системата трябва да разбира къде се намират пътят, тротоарът, автомобилите, пешеходците, знаците, светофарите и други обекти. В контекста на Cityscapes целта е да се класифицират пикселите към 19 тренировъчни класа.
+
+\section{Цел на проекта и изисквания}
+
+Основната цел е изграждане на end-to-end система за semantic segmentation на градски сцени. Системата трябва да позволява обучение, оценяване, сравнение и демонстрация на различни модели.
+
+Проектът покрива следните изисквания:
+
+\begin{enumerate}
+  \item Проучване на научни статии и техники за semantic segmentation.
+  \item Сравнение на pixel-wise Cross Entropy loss, Dice loss и Focal loss.
+  \item Анализ на Cityscapes dataset: брой изображения, класове, class imbalance, аномалии и визуализации.
+  \item Експерименти с autoencoder-type архитектура, реализирана чрез Tiny U-Net.
+  \item Демонстрация на learning-rate scheduling чрез cosine annealing и step decay.
+  \item Експерименти с различни preprocessing и augmentation стратегии.
+  \item Streamlit web интерфейс за inference.
+  \item Unit tests за ключови компоненти.
+  \item Model report файл с baseline, експерименти, метрики, коментари и графики.
+\end{enumerate}
+
+\section{Dataset: Cityscapes}
+
+\subsection{Използвани пакети}
+
+За проекта са нужни два основни Cityscapes пакета:
+
+\begin{verbatim}
+leftImg8bit_trainvaltest.zip
+където са RGB изображенията за train, val и test
+
+gtFine_trainvaltest.zip
+където са фините pixel-level анотации за train и val
+\end{verbatim}
+
+Очакваната структура на данните е:
+
+\begin{verbatim}
+data/raw/cityscapes/
++-- leftImg8bit/
+|   +-- train/
+|   +-- val/
+|   +-- test/
++-- gtFine/
+    +-- train/
+    +-- val/
+    +-- test/
+\end{verbatim}
+
+\subsection{Използване на split-овете}
+
+\begin{itemize}
+  \item \code{train} -- използва се за обучение на моделите;
+  \item \code{val} -- използва се за сравнение на моделите и финална оценка;
+  \item \code{test} -- използва се само за inference/demo, защото публичният test split няма реални ground-truth masks.
+\end{itemize}
+
+\subsection{Класове}
+
+В Cityscapes се използват 19 тренировъчни класа. Те са:
+
+\begin{longtable}{p{0.25\textwidth} p{0.25\textwidth} p{0.25\textwidth}}
+\toprule
+Пътна инфраструктура & Обекти / среда & Участници в движението \\
+\midrule
+road & building & person \\
+sidewalk & wall & rider \\
+terrain & fence & car \\
+ & pole & truck \\
+ & traffic light & bus \\
+ & traffic sign & train \\
+ & vegetation & motorcycle \\
+ & sky & bicycle \\
+\bottomrule
+\end{longtable}
+
+Част от оригиналните Cityscapes label IDs се игнорират при обучение. За тази цел се използва \code{labelTrainIds} mapping и \code{ignore\_index = 255} за невалидни или неизползвани пиксели.
+
+\section{Exploratory Data Analysis и подготовка на данните}
+
+EDA фазата има за цел да провери дали dataset-ът е консистентен и подходящ за обучение. Реализационният план изисква анализ на броя наблюдения, class distribution, missing image-mask pairs, invalid mask values и визуализации.
+
+Основните проверки са:
+
+\begin{itemize}
+  \item проверка на броя изображения и маски в \code{train} и \code{val};
+  \item проверка дали всяко изображение има съответна маска;
+  \item проверка на размерите на image-mask двойките;
+  \item проверка на валидните train IDs и \code{255} ignore пиксели;
+  \item анализ на class imbalance;
+  \item визуализация на image, ground truth mask и overlay.
+\end{itemize}
+
+\subsection{Preprocessing}
+
+Използваната основна preprocessing конфигурация е:
+
+\begin{itemize}
+  \item resize на изображението до \code{512x1024};
+  \item random crop до \code{512x512};
+  \item ImageNet normalization;
+  \item синхронизирани геометрични трансформации върху image и mask;
+  \item nearest-neighbor interpolation за маските.
+\end{itemize}
+
+Важно е маските да не се нормализират като изображения. Те трябва да останат като цели числа, представящи класове.
+
+\subsection{Augmentation стратегии}
+
+Тествани са няколко preprocessing/augmentation стратегии:
+
+\begin{itemize}
+  \item \code{resize\_only} -- само преоразмеряване;
+  \item \code{basic\_aug} -- resize/crop, horizontal flip, brightness/contrast;
+  \item \code{strong\_aug} -- по-силни цветови и геометрични трансформации.
+\end{itemize}
+
+Изводът от експериментите е, че по-силните трансформации не винаги подобряват mean IoU. В някои случаи те влошават стабилността на validation резултатите.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{reports/presentation_assets/class_distribution.png}
+\caption{Разпределение на пикселите по класове. Графиката показва силен class imbalance, доминиран от road, building и vegetation.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\textwidth]{reports/presentation_assets/category_distribution.png}
+\caption{Разпределение на пикселите по семантични категории. Flat, construction и nature категориите покриват най-голяма част от сцените.}
+\end{figure}
+
+\subsection{EDA визуализации от \code{reports/figures}}
+
+Следващите фигури са директно генерирани от \code{make eda} и са запазени в \code{reports/figures}. Те документират както количествените характеристики на dataset-а, така и качествени примери за image-mask съответствие.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{reports/figures/image_size_distribution.png}
+\caption{Разпределение на размерите на изображенията в анализираната извадка. Cityscapes изображенията са консистентни като резолюция.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{reports/figures/class_distribution.png}
+\caption{Class distribution, генериран от EDA скрипта. Графиката потвърждава силния дисбаланс в полза на големите структурни класове.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{reports/figures/category_pixel_proportions.png}
+\caption{Дял на пикселите по семантични категории. Flat и construction категориите доминират в градските сцени.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/figures/paper_class_pixels_by_category.png}
+\caption{Брой пиксели по класове, групирани по категории. Тази визуализация следва стила на dataset анализите в semantic segmentation статии.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{reports/figures/annotation_summary_table.png}
+\caption{Обобщение на анотациите и label density. Таблицата служи като compact EDA преглед на dataset-а.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/figures/sample_overlays.png}
+\caption{Примерни image-mask overlays. Фигурата показва, че маските са правилно подравнени с RGB изображенията.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/figures/rare_classes_examples.png}
+\caption{Примери с редки класове. Тези изображения са важни за qualitative анализ, защото редките класове често са най-трудни за сегментиране.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{reports/figures/traffic_participant_complexity.png}
+\caption{Оценка на scene complexity чрез traffic participant компоненти. По-сложните сцени съдържат повече малки и припокриващи се обекти.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{reports/figures/vehicle_component_area_histogram.png}
+\caption{Хистограма на площите на vehicle компоненти. Малките компоненти обясняват защо car, truck, bus и motorcycle класовете изискват добра multi-scale обработка.}
+\end{figure}
+
+\section{Training pipeline}
+
+Проектът използва конфигурируем training pipeline, управляван чрез YAML конфигурации. Това позволява повторяемост и ясно сравнение между експериментите.
+
+Основните компоненти са:
+
+\begin{enumerate}
+  \item Dataset loader за Cityscapes.
+  \item Preprocessing и augmentations.
+  \item Model factory за избор на архитектура.
+  \item Loss factory за избор на loss функция.
+  \item Optimizer и scheduler.
+  \item Training loop с mixed precision.
+  \item Evaluation loop с mean IoU, Dice и pixel accuracy.
+  \item Checkpoint saving.
+  \item Export на history, plots, confusion matrix и model report.
+\end{enumerate}
+
+Примерна конфигурация:
+
+\begin{verbatim}
+training:
+  epochs: 30
+  batch_size: 4
+  mixed_precision: true
+
+model:
+  architecture: deeplabv3plus
+  encoder_name: resnet101
+  encoder_weights: imagenet
+  num_classes: 19
+
+loss:
+  name: cross_entropy_dice
+
+scheduler:
+  name: cosine_annealing
+\end{verbatim}
+
+\section{Използвани архитектури}
+
+\subsection{Baseline majority-class model}
+
+Baseline моделът е greedy статистически модел, който предсказва най-често срещания клас за всеки валиден пиксел. В проекта този модел е \code{000\_baseline\_majority}.
+
+Неговите резултати са:
+
+\begin{itemize}
+  \item mean IoU = 0.0198;
+  \item mean Dice = 0.0288;
+  \item pixel accuracy = 0.3765.
+\end{itemize}
+
+Baseline е слаб, но е важен, защото всички невронни модели трябва да се сравняват спрямо него.
+
+\subsection{Tiny U-Net}
+
+Tiny U-Net е малка custom encoder-decoder архитектура, реализирана ръчно в PyTorch. Тя изпълнява изискването за autoencoder-type neural network. Архитектурата съдържа:
+
+\begin{itemize}
+  \item encoder blocks с convolution, batch normalization и ReLU;
+  \item max pooling за downsampling;
+  \item bottleneck слой;
+  \item decoder с upsampling или transposed convolution;
+  \item skip connections чрез concatenation;
+  \item final \code{1x1} convolution към 19 класа.
+\end{itemize}
+
+Tiny U-Net е полезен за валидиране на pipeline-а, но значително изостава спрямо pretrained encoder моделите.
+
+\subsection{U-Net}
+
+U-Net е класическа encoder-decoder архитектура за segmentation. Encoder-ът извлича все по-абстрактни признаци, а decoder-ът възстановява пространствената резолюция. Skip connections прехвърлят детайлна локална информация от encoder към decoder.
+
+В проекта U-Net е използван с различни encoders:
+
+\begin{itemize}
+  \item ResNet18;
+  \item ResNet34;
+  \item ResNet50;
+  \item EfficientNet-B3.
+\end{itemize}
+
+Най-добрата U-Net конфигурация е \code{030\_final\_unet\_resnet34\_ce\_dice\_cosine}, която постига mIoU = 0.6920.
+
+\subsection{U-Net++}
+
+U-Net++ разширява U-Net чрез по-гъсти skip connections между encoder и decoder блоковете. Целта е да се намали semantic gap между ниско-level feature maps и decoder feature maps.
+
+В проекта \code{044\_unetplusplus\_resnet34\_ce\_dice} постига mIoU = 0.6925, което е малко над стандартния U-Net ResNet34 CE+Dice резултат.
+
+\subsection{FPN}
+
+Feature Pyramid Network (FPN) използва признаци от различни дълбочини на encoder-а и ги агрегира в multi-scale представяне. Това е особено полезно за Cityscapes, защото в една сцена има големи обекти като road/building и малки обекти като traffic light/sign.
+
+Финалният най-добър модел е \code{046\_fpn\_efficientnet\_b3\_ce\_dice} с mIoU = 0.7283.
+
+\subsection{PSPNet}
+
+PSPNet използва pyramid pooling за улавяне на глобален контекст. Идеята е моделът да разбира по-добре цялата сцена, а не само локалните детайли.
+
+В проекта \code{024\_final\_pspnet\_resnet34\_ce\_cosine} постига mIoU = 0.5835. Това е по-ниско от FPN, DeepLabV3+ и U-Net конфигурациите, но е полезен сравнителен експеримент.
+
+\subsection{DeepLabV3+}
+
+DeepLabV3+ комбинира atrous convolution, Atrous Spatial Pyramid Pooling (ASPP) и decoder модул. Atrous convolution позволява по-голям receptive field без директно намаляване на резолюцията.
+
+Най-добрият DeepLabV3+ експеримент е \code{047\_deeplabv3plus\_efficientnet\_b3\_ce\_dice} с mIoU = 0.7256. Той е много близък до най-добрия FPN модел.
+
+\subsection{SegFormer}
+
+SegFormer е transformer-based архитектура за semantic segmentation. Тя използва hierarchical transformer encoder и лек MLP decoder. В проекта \code{049\_segformer\_mit\_b1\_ce\_dice\_optional} е най-добрият transformer-based експеримент с mIoU = 0.7087.
+
+\section{Използвани encoders}
+
+\subsection{ResNet}
+
+ResNet архитектурите използват residual connections, които улесняват обучението на по-дълбоки мрежи. В проекта са използвани ResNet18, ResNet34, ResNet50 и ResNet101.
+
+Разликата между тях е основно в дълбочината и броя параметри. По-дълбоките модели могат да извличат по-богати признаци, но изискват повече изчислителни ресурси и не винаги дават пропорционално подобрение.
+
+\subsection{EfficientNet-B3}
+
+EfficientNet използва compound scaling, при който depth, width и resolution се увеличават балансирано. EfficientNet-B3 дава по-силни pretrained features от ResNet34 в най-добрите експерименти.
+
+Най-добрите два резултата използват EfficientNet-B3 encoder:
+
+\begin{itemize}
+  \item FPN + EfficientNet-B3: mIoU = 0.7283;
+  \item DeepLabV3+ + EfficientNet-B3: mIoU = 0.7256.
+\end{itemize}
+
+\subsection{MiT-B1}
+
+MiT-B1 е encoder от SegFormer архитектурата. Той използва transformer blocks и hierarchical feature representation. В проекта MiT-B1 дава добър резултат, но не надминава EfficientNet-B3 моделите.
+
+\section{Loss функции}
+
+\subsection{Cross Entropy Loss}
+
+Pixel-wise Cross Entropy разглежда всеки пиксел като отделен classification пример. За multi-class segmentation моделът връща logits с форма \code{[B, C, H, W]}, а target маската е \code{[B, H, W]}.
+
+\[
+L_{CE} = - \sum_{c=1}^{C} y_c \log(p_c)
+\]
+
+Предимството на Cross Entropy е стабилното обучение. Недостатъкът е, че при силен class imbalance тя може да фаворизира доминиращите класове.
+
+\subsection{Dice Loss}
+
+Dice Loss оптимизира припокриването между predicted mask и ground truth mask.
+
+\[
+Dice = \frac{2TP}{2TP + FP + FN}
+\]
+
+Тя е полезна при segmentation, защото измерва overlap quality. Самостоятелно Dice Loss може да бъде по-нестабилна, затова в проекта най-добри резултати дава комбинацията Cross Entropy + Dice.
+
+\subsection{Focal Loss}
+
+Focal Loss намалява тежестта на лесните примери и се фокусира върху трудни пиксели и редки класове.
+
+\[
+L_{focal} = - (1 - p_t)^\gamma \log(p_t)
+\]
+
+В проекта Focal+Dice дава силни резултати, но не надминава CE+Dice.
+
+\subsection{Lovasz Loss}
+
+Lovasz е loss, ориентиран към IoU/Jaccard оптимизация. В проекта CE+Lovasz е тестван чрез \code{048\_unet\_resnet34\_ce\_lovasz}, но резултатът не надминава CE+Dice.
+
+\section{Метрики за оценка}
+
+\subsection{Pixel Accuracy}
+
+Pixel Accuracy измерва дела на правилно класифицираните пиксели:
+
+\[
+PixelAccuracy = \frac{correct\ pixels}{all\ valid\ pixels}
+\]
+
+Тази метрика е лесна за разбиране, но не е достатъчна сама по себе си, защото Cityscapes има доминиращи класове като road, building и sky. Модел може да има висока pixel accuracy, но слаб IoU върху редки класове.
+
+\subsection{Intersection over Union}
+
+IoU е основната метрика в проекта:
+
+\[
+IoU = \frac{TP}{TP + FP + FN}
+\]
+
+Mean IoU е средната стойност на IoU по класове. Тя е по-информативна от pixel accuracy при class imbalance.
+
+\subsection{Dice coefficient}
+
+Dice coefficient е overlap метрика, близка по идея до IoU:
+
+\[
+Dice = \frac{2TP}{2TP + FP + FN}
+\]
+
+В model report се използват максимум три основни метрики: mean IoU, mean Dice и pixel accuracy.
+
+\section{Експериментален план}
+
+Първоначалният implementation plan предвижда baseline, tiny U-Net, U-Net, DeepLabV3+, FPN, PSPNet, U-Net++ и опционален SegFormer. Всички експерименти се управляват чрез YAML configs, а резултатите се записват в model report.
+
+В проекта са реализирани общо 28 evaluation експеримента плюс baseline. Това надвишава минималното изискване от 8 експеримента и позволява надеждно сравнение между архитектури, encoders, loss функции, scheduler-и и preprocessing варианти.
+
+\section{Model report и резултати}
+
+Model report файлът съдържа:
+
+\begin{itemize}
+  \item baseline row като първи ред;
+  \item всички evaluation експерименти;
+  \item Top 10 highlight;
+  \item процентна промяна спрямо baseline;
+  \item коментари за всеки модел;
+  \item loss curves за Top 5;
+  \item artifacts/checkpoints sheet.
+\end{itemize}
+
+
+\begin{landscape}
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{r p{7.0cm} p{3.0cm} p{3.2cm} p{3.2cm} r r r}
+\caption{Най-добри 10 evaluation експеримента, сортирани по mean IoU.}\\
+\toprule
+Rank & Experiment & Architecture & Encoder & Loss & mIoU & Dice & Acc. \\
+\midrule
+\endfirsthead
+\toprule
+Rank & Experiment & Architecture & Encoder & Loss & mIoU & Dice & Acc. \\
+\midrule
+\endhead
+1 & \texttt{046\_fpn\_efficientnet\_b3\_ce\_dice} & fpn & efficientnet-b3 & cross\_entropy\_dice & 0.7283 & 0.8335 & 0.9503 \\
+2 & \texttt{047\_deeplabv3plus\_efficientnet\_b3\_ce\_dice} & deeplabv3plus & efficientnet-b3 & cross\_entropy\_dice & 0.7256 & 0.8310 & 0.9482 \\
+3 & \texttt{049\_segformer\_mit\_b1\_ce\_dice\_optional} & segformer & mit\_b1 & cross\_entropy\_dice & 0.7087 & 0.8188 & 0.9488 \\
+4 & \texttt{043\_deeplabv3plus\_resnet101\_ce\_dice} & deeplabv3plus & resnet101 & cross\_entropy\_dice & 0.7022 & 0.8130 & 0.9450 \\
+5 & \texttt{044\_unetplusplus\_resnet34\_ce\_dice} & unetplusplus & resnet34 & cross\_entropy\_dice & 0.6925 & 0.8057 & 0.9495 \\
+6 & \texttt{030\_final\_unet\_resnet34\_ce\_dice\_cosine} & unet & resnet34 & cross\_entropy\_dice & 0.6920 & 0.8066 & 0.9466 \\
+7 & \texttt{040\_unet\_resnet34\_ce\_dice\_50ep} & unet & resnet34 & cross\_entropy\_dice & 0.6910 & 0.8045 & 0.9478 \\
+8 & \texttt{045\_unet\_efficientnet\_b3\_ce\_dice} & unet & efficientnet-b3 & cross\_entropy\_dice & 0.6908 & 0.7946 & 0.9510 \\
+9 & \texttt{031\_final\_unet\_resnet34\_focal\_dice\_cosine} & unet & resnet34 & focal\_dice & 0.6869 & 0.8020 & 0.9456 \\
+10 & \texttt{048\_unet\_resnet34\_ce\_lovasz} & unet & resnet34 & cross\_entropy\_lovasz & 0.6865 & 0.8006 & 0.9476 \\
+
+\bottomrule
+\end{longtable}
+\endgroup
+\end{landscape}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{reports/presentation_assets/top_models_miou.png}
+\caption{Top evaluation runs, сортирани по validation mean IoU. Най-добрият модел е FPN + EfficientNet-B3 + CE+Dice.}
+\end{figure}
+
+\section{Избор на най-добър модел}
+
+Най-добрият модел е \code{046\_fpn\_efficientnet\_b3\_ce\_dice}.
+
+\begin{longtable}{p{0.35\textwidth} p{0.55\textwidth}}
+\toprule
+Компонент & Стойност \\
+\midrule
+Architecture & FPN \\
+Encoder & EfficientNet-B3 \\
+Encoder weights & ImageNet \\
+Loss & Cross Entropy + Dice \\
+Scheduler & Cosine Annealing \\
+Epochs & 30 \\
+Batch size & 4 \\
+Image size / crop & 512x1024 / 512x512 \\
+Augmentation & basic augmentation \\
+Mean IoU & 0.7283 \\
+Mean Dice & 0.8335 \\
+Pixel Accuracy & 0.9503 \\
+\bottomrule
+\end{longtable}
+
+Този модел работи най-добре поради комбинацията от:
+
+\begin{itemize}
+  \item multi-scale feature aggregation чрез FPN;
+  \item силен pretrained EfficientNet-B3 encoder;
+  \item CE+Dice loss, който балансира pixel-wise classification и overlap quality;
+  \item Cosine Annealing scheduler, който стабилизира обучението.
+\end{itemize}
+
+\section{Анализ на top моделите}
+
+\subsection{FPN + EfficientNet-B3}
+
+FPN комбинира feature maps от различни нива на encoder-а. Това помага едновременно за големи класове като road и building и за по-малки обекти. EfficientNet-B3 предоставя по-силни представяния от ResNet34, което се вижда от най-високия mean IoU.
+
+\subsection{DeepLabV3+ + EfficientNet-B3}
+
+DeepLabV3+ с EfficientNet-B3 е вторият най-добър модел. Разликата спрямо FPN е малка, което показва, че atrous convolution и ASPP са много подходящи за Cityscapes.
+
+\subsection{SegFormer MiT-B1}
+
+SegFormer е най-добрият transformer-based run. Той се представя добре, но изостава от EfficientNet-B3 CNN моделите. Това може да се дължи на ограничен брой epochs, по-малък batch size или необходимост от по-фина настройка на learning rate.
+
+\subsection{U-Net и U-Net++}
+
+U-Net ResNet34 CE+Dice остава стабилен силен baseline. U-Net++ постига малко по-добър mIoU от стандартния U-Net, но не достига FPN и DeepLabV3+ с EfficientNet-B3.
+
+\section{Loss curves и generalization gap}
+
+За Top 5 моделите са анализирани train/validation loss curves. Основните наблюдения са:
+
+\begin{itemize}
+  \item train loss намалява стабилно при всички Top 5 модела;
+  \item validation loss също намалява, но остава по-висок от train loss;
+  \item има умерен generalization gap, но не драматично overfitting поведение;
+  \item при някои модели validation loss е по-шумен;
+  \item Top 1 и Top 2 са много близки като качество.
+\end{itemize}
+
+\section{Confusion matrix и error analysis}
+
+За най-добрия модел е изготвена confusion matrix визуализация. Общите изводи от анализа са:
+
+\begin{itemize}
+  \item моделът е най-силен върху доминиращи и визуално стабилни класове като road, building, vegetation, car, sky и sidewalk;
+  \item проблемните класове са малки, редки или boundary-sensitive;
+  \item типични трудни класове са traffic light, traffic sign, rider, motorcycle и bicycle;
+  \item чести грешки се появяват около граници между road, sidewalk и terrain;
+  \item далечни и частично скрити обекти са по-трудни за сегментиране.
+\end{itemize}
+
+Това потвърждава защо mean IoU е по-подходяща основна метрика от pixel accuracy.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/presentation_assets/per_class_iou_bar.png}
+\caption{Per-class IoU за най-добрия модел. Малките и редки класове имат по-нисък IoU от големите структурни класове.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/presentation_assets/per_class_recall_bar.png}
+\caption{Per-class recall за най-добрия модел. Recall анализът показва кои класове моделът пропуска най-често.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/presentation_assets/confusion_matrix_normalized_by_true_class.png}
+\caption{Нормализирана confusion matrix по истински клас. Диагоналът показва правилните класификации, а off-diagonal стойностите показват най-честите обърквания.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{reports/presentation_assets/confusion_matrix_log_counts.png}
+\caption{Confusion matrix с логаритмична скала на броя пиксели. Логаритмичната визуализация прави видими и по-редките грешки.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{reports/presentation_assets/top_15_confusions_bar.png}
+\caption{Top 15 най-чести обърквания между класове. Тези грешки са основа за qualitative error analysis и бъдещи подобрения.}
+\end{figure}
+
+\subsection{Qualitative validation examples}
+
+Следващите панели са генерирани от evaluation pipeline-а за най-добрия модел \code{046\_fpn\_efficientnet\_b3\_ce\_dice}. Всеки панел съдържа original image, ground truth, prediction, overlay и error map.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{reports/figures/046_fpn_efficientnet_b3_ce_dice_eval/example_000_panel.png}
+\caption{Qualitative пример 1 за най-добрия модел. Панелът показва едновременно входното изображение, истинската маска, предсказанието, overlay и error map.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{reports/figures/046_fpn_efficientnet_b3_ce_dice_eval/example_001_panel.png}
+\caption{Qualitative пример 2 за най-добрия модел. Error map частта позволява бърза визуална проверка на проблемните пиксели.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{reports/figures/046_fpn_efficientnet_b3_ce_dice_eval/example_002_panel.png}
+\caption{Qualitative пример 3 за най-добрия модел. Такива примери допълват числените метрики с визуална интерпретация на грешките.}
+\end{figure}
+
+\section{Streamlit demo приложение}
+
+Крайният проект включва Streamlit приложение за демонстрация на inference. Основните функционалности са:
+
+\begin{itemize}
+  \item upload на изображение;
+  \item избор на checkpoint;
+  \item inference с избрания модел;
+  \item показване на original image, predicted mask и overlay;
+  \item легенда с класовете;
+  \item опция за сравнение с ground truth, ако е наличен.
+\end{itemize}
+
+Streamlit приложението демонстрира практическата използваемост на проекта и затваря цикъла от обучение до визуална демонстрация.
+
+\section{Тестове и качество на кода}
+
+Implementation plan предвижда unit tests, които не изискват пълния Cityscapes dataset и могат да се изпълняват на CPU. Основните тестове са:
+
+\begin{itemize}
+  \item label mapping тестове;
+  \item dataset loading тестове със synthetic data;
+  \item loss function тестове;
+  \item metric тестове;
+  \item model factory тестове;
+  \item training step smoke test;
+  \item inference и Streamlit import smoke tests.
+\end{itemize}
+
+Тези тестове гарантират, че pipeline-ът е възпроизводим и стабилен.
+
+\section{Ограничения}
+
+Проектът има няколко ограничения:
+
+\begin{itemize}
+  \item тренировката е извършена върху resize/crop изображения, а не върху full-resolution Cityscapes изображения;
+  \item някои архитектури са ограничени от GPU memory;
+  \item публичният test split няма реални ground-truth masks;
+  \item class imbalance остава предизвикателство;
+  \item SegFormer експериментите са ограничени до MiT-B1;
+  \item качественият анализ зависи от избрани validation примери.
+\end{itemize}
+
+\section{Бъдеща работа}
+
+Възможни подобрения:
+
+\begin{itemize}
+  \item class-weighted Cross Entropy;
+  \item по-големи crops: 512x768 или 768x768;
+  \item test-time augmentation;
+  \item fine-tuning на най-добрия модел с по-нисък learning rate;
+  \item SegFormer MiT-B2 или MiT-B3;
+  \item DeepLabV3+ с други EfficientNet encoders;
+  \item per-class confusion matrix и error analysis по класове;
+  \item повече qualitative examples за добри и проблемни предсказания.
+\end{itemize}
+
+\section{Заключение}
+
+Проектът демонстрира цялостен deep learning workflow за semantic segmentation: данни, preprocessing, модели, обучение, оценяване, model report и Streamlit demo.
+
+Основният извод е, че \textbf{multi-scale feature aggregation}, комбиниран със \textbf{силен pretrained encoder} и \textbf{CE+Dice loss}, дава най-добро качество върху Cityscapes validation split. Най-добрият модел е FPN + EfficientNet-B3, който постига mean IoU = 0.7283.
+
+Pixel Accuracy остава полезна допълнителна метрика, но не трябва да се използва самостоятелно, защото може да прикрие слабо представяне върху редки класове. Mean IoU е основната метрика за вземане на решение за най-добър модел.
+
+\newpage
+\appendix
+\section{Пълен списък на експериментите}
+
+
+\begin{landscape}
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{r p{7.0cm} p{4.2cm} p{3.0cm} p{3.2cm} r r r}
+\caption{Пълен списък на baseline и всички evaluation експерименти от model report файла.}\\
+\toprule
+Rank & Experiment ID & Model / Encoder & Loss & Scheduler & mIoU & Dice & Acc. \\
+\midrule
+\endfirsthead
+\toprule
+Rank & Experiment ID & Model / Encoder & Loss & Scheduler & mIoU & Dice & Acc. \\
+\midrule
+\endhead
+0 & \texttt{000\_baseline\_majority} & majority\_baseline / - & cross\_entropy & cosine\_annealing & 0.0198 & 0.0288 & 0.3765 \\
+1 & \texttt{046\_fpn\_efficientnet\_b3\_ce\_dice} & fpn / efficientnet-b3 & cross\_entropy\_dice & cosine\_annealing & 0.7283 & 0.8335 & 0.9503 \\
+2 & \texttt{047\_deeplabv3plus\_efficientnet\_b3\_ce\_dice} & deeplabv3plus / efficientnet-b3 & cross\_entropy\_dice & cosine\_annealing & 0.7256 & 0.8310 & 0.9482 \\
+3 & \texttt{049\_segformer\_mit\_b1\_ce\_dice\_optional} & segformer / mit\_b1 & cross\_entropy\_dice & cosine\_annealing & 0.7087 & 0.8188 & 0.9488 \\
+4 & \texttt{043\_deeplabv3plus\_resnet101\_ce\_dice} & deeplabv3plus / resnet101 & cross\_entropy\_dice & cosine\_annealing & 0.7022 & 0.8130 & 0.9450 \\
+5 & \texttt{044\_unetplusplus\_resnet34\_ce\_dice} & unetplusplus / resnet34 & cross\_entropy\_dice & cosine\_annealing & 0.6925 & 0.8057 & 0.9495 \\
+6 & \texttt{030\_final\_unet\_resnet34\_ce\_dice\_cosine} & unet / resnet34 & cross\_entropy\_dice & cosine\_annealing & 0.6920 & 0.8066 & 0.9466 \\
+7 & \texttt{040\_unet\_resnet34\_ce\_dice\_50ep} & unet / resnet34 & cross\_entropy\_dice & cosine\_annealing & 0.6910 & 0.8045 & 0.9478 \\
+8 & \texttt{045\_unet\_efficientnet\_b3\_ce\_dice} & unet / efficientnet-b3 & cross\_entropy\_dice & cosine\_annealing & 0.6908 & 0.7946 & 0.9510 \\
+9 & \texttt{031\_final\_unet\_resnet34\_focal\_dice\_cosine} & unet / resnet34 & focal\_dice & cosine\_annealing & 0.6869 & 0.8020 & 0.9456 \\
+10 & \texttt{048\_unet\_resnet34\_ce\_lovasz} & unet / resnet34 & cross\_entropy\_lovasz & cosine\_annealing & 0.6865 & 0.8006 & 0.9476 \\
+11 & \texttt{023\_final\_fpn\_resnet34\_ce\_cosine} & fpn / resnet34 & cross\_entropy & cosine\_annealing & 0.6838 & 0.8000 & 0.9468 \\
+12 & \texttt{039\_final\_deeplabv3plus\_resnet101\_ce\_cosine} & deeplabv3plus / resnet101 & cross\_entropy & cosine\_annealing & 0.6793 & 0.7943 & 0.9480 \\
+13 & \texttt{025\_final\_deeplabv3plus\_resnet50\_ce\_cosine} & deeplabv3plus / resnet50 & cross\_entropy & cosine\_annealing & 0.6730 & 0.7887 & 0.9472 \\
+14 & \texttt{032\_final\_unet\_resnet34\_resize\_only\_ce\_cosine} & unet / resnet34 & cross\_entropy & cosine\_annealing & 0.6696 & 0.7871 & 0.9471 \\
+15 & \texttt{022\_final\_unetplusplus\_resnet34\_ce\_cosine} & unetplusplus / resnet34 & cross\_entropy & cosine\_annealing & 0.6686 & 0.7857 & 0.9486 \\
+16 & \texttt{033\_final\_unet\_resnet34\_strong\_aug\_ce\_cosine} & unet / resnet34 & cross\_entropy & cosine\_annealing & 0.6651 & 0.7835 & 0.9463 \\
+17 & \texttt{021\_final\_unet\_resnet34\_ce\_cosine} & unet / resnet34 & cross\_entropy & cosine\_annealing & 0.6648 & 0.7828 & 0.9469 \\
+18 & \texttt{038\_final\_unet\_resnet50\_ce\_cosine} & unet / resnet50 & cross\_entropy & cosine\_annealing & 0.6586 & 0.7763 & 0.9468 \\
+19 & \texttt{027\_final\_unet\_resnet34\_ce\_plateau} & unet / resnet34 & cross\_entropy & reduce\_on\_plateau & 0.6558 & 0.7760 & 0.9446 \\
+20 & \texttt{029\_final\_unet\_resnet34\_focal\_cosine} & unet / resnet34 & focal & cosine\_annealing & 0.6556 & 0.7752 & 0.9448 \\
+21 & \texttt{037\_final\_unet\_resnet18\_ce\_cosine} & unet / resnet18 & cross\_entropy & cosine\_annealing & 0.6398 & 0.7603 & 0.9436 \\
+22 & \texttt{026\_final\_unet\_resnet34\_ce\_step} & unet / resnet34 & cross\_entropy & step\_decay & 0.6037 & 0.7232 & 0.9419 \\
+23 & \texttt{024\_final\_pspnet\_resnet34\_ce\_cosine} & pspnet / resnet34 & cross\_entropy & cosine\_annealing & 0.5835 & 0.7101 & 0.9305 \\
+24 & \texttt{028\_final\_unet\_resnet34\_dice\_cosine} & unet / resnet34 & dice & cosine\_annealing & 0.5488 & 0.6363 & 0.9308 \\
+25 & \texttt{036\_final\_tiny\_unet\_64\_ce\_cosine} & tiny\_unet / - & cross\_entropy & cosine\_annealing & 0.3920 & 0.4841 & 0.8808 \\
+26 & \texttt{035\_final\_tiny\_unet\_32\_ce\_cosine} & tiny\_unet / - & cross\_entropy & cosine\_annealing & 0.3437 & 0.4294 & 0.8657 \\
+27 & \texttt{020\_final\_tiny\_unet\_ce\_cosine} & tiny\_unet / - & cross\_entropy & cosine\_annealing & 0.3419 & 0.4265 & 0.8657 \\
+28 & \texttt{034\_final\_tiny\_unet\_16\_ce\_cosine} & tiny\_unet / - & cross\_entropy & cosine\_annealing & 0.2610 & 0.3236 & 0.8323 \\
+
+\bottomrule
+\end{longtable}
+\endgroup
+\end{landscape}
+
+
+\section{Примерна структура на проекта}
+
+\begin{verbatim}
+semantic-segmentation-cityscapes/
++-- app/
+|   +-- streamlit_app.py
++-- configs/
+|   +-- experiments/
++-- data/
+|   +-- raw/cityscapes/
++-- docs/
++-- reports/
++-- scripts/
++-- src/cityseg/
+|   +-- data/
+|   +-- models/
+|   +-- training/
+|   +-- inference/
+|   +-- reporting/
++-- tests/
+\end{verbatim}
+
+\section{Използвана литература}
+
+\begin{enumerate}
+  \item Cordts et al., The Cityscapes Dataset for Semantic Urban Scene Understanding, CVPR 2016. URL: \texttt{https://arxiv.org/abs/1604.01685}
+  \item Long, Shelhamer, Darrell, Fully Convolutional Networks for Semantic Segmentation, CVPR 2015. URL: \texttt{https://arxiv.org/abs/1411.4038}
+  \item Ronneberger, Fischer, Brox, U-Net: Convolutional Networks for Biomedical Image Segmentation, MICCAI 2015. URL: \texttt{https://arxiv.org/abs/1505.04597}
+  \item Noh, Hong, Han, Learning Deconvolution Network for Semantic Segmentation, ICCV 2015. URL: \texttt{https://arxiv.org/abs/1505.04366}
+  \item Chen et al., Encoder-Decoder with Atrous Separable Convolution for Semantic Image Segmentation, ECCV 2018. URL: \texttt{https://arxiv.org/abs/1802.02611}
+  \item Zhao et al., Pyramid Scene Parsing Network, CVPR 2017. URL: \texttt{https://arxiv.org/abs/1612.01105}
+  \item Xie et al., SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers, NeurIPS 2021. URL: \texttt{https://arxiv.org/abs/2105.15203}
+  \item Lin et al., Focal Loss for Dense Object Detection, ICCV 2017. URL: \texttt{https://arxiv.org/abs/1708.02002}
+  \item Milletari, Navab, Ahmadi, V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation, 2016. URL: \texttt{https://arxiv.org/abs/1606.04797}
+  \item Sudre et al., Generalised Dice Overlap as a Deep Learning Loss Function for Highly Unbalanced Segmentations, 2017. URL: \texttt{https://arxiv.org/abs/1707.03237}
+\end{enumerate}
+
+\end{document}
